@@ -1,4 +1,4 @@
-from investigate import *
+from ini import *
 def utf(path):
  b=path.read_bytes();assert b[:4]==b'UTF '
  ver,no,ns,pad,esize,so,sa,ss,do=struct.unpack_from('<9I',b,4);assert ver==257
