@@ -3,10 +3,10 @@
 ## Freelancer Liberty Elite Ship Blender Demo
 
 <p align="center">
-  <a href="docs/media/freelancer-liberty-elite-ship-blender-demo.mp4">
-    <img src="docs/media/freelancer-liberty-elite-ship-blender-demo.png" alt="Freelancer Liberty Elite ship shown in Blender" width="720">
-  </a><br>
-  <a href="docs/media/freelancer-liberty-elite-ship-blender-demo.mp4">Watch the Freelancer Liberty Elite Ship Blender demo video</a>
+  <video controls width="720" poster="docs/media/freelancer-liberty-elite-ship-blender-demo.png">
+    <source src="docs/media/freelancer-liberty-elite-ship-blender-demo.mp4" type="video/mp4">
+    <a href="docs/media/freelancer-liberty-elite-ship-blender-demo.mp4">Watch the Freelancer Liberty Elite Ship Blender demo video</a>
+  </video>
 </p>
 
 A local, deterministic pipeline that builds self-contained Blender ships from original Freelancer assets: hulls, mounted equipment, packed textures, native animations, animated effects and working light controls.
