@@ -163,10 +163,16 @@ def main():
         reports=sorted((BASE/'reports'/args.scope).glob('*.json'))
         if args.ship:reports=[p for p in reports if p.stem in args.ship]
         if not reports:raise RuntimeError('No build reports')
+        failures=[]
         for p in reports:
             r=json.loads(p.read_text());assert r['valid'],r;assert Path(r['output']).exists()
-            bounded([cfg['blender'],'--background',r['output'],'--threads',str(cfg['threads']),'--python-exit-code','1','--python',str(BASE/'pipeline/verify_blend.py')],BASE/'cache'/('verify-'+p.stem+'.log'),cfg)
+            try:
+                bounded([cfg['blender'],'--background',r['output'],'--threads',str(cfg['threads']),'--python-exit-code','1','--python',str(BASE/'pipeline/verify_blend.py')],BASE/'cache'/('verify-'+p.stem+'.log'),cfg)
+            except RuntimeError as error:
+                failures.append({'ship':p.stem,'error':str(error)});print(p.stem,'FAILED',flush=True);continue
             print(p.stem,'PASS (reopened from disk)',flush=True)
+        dump(BASE/'reports'/('verification-'+args.scope+'.json'),{'checked':len(reports),'failures':failures})
+        if failures:raise RuntimeError('Verification failures: '+', '.join(f['ship'] for f in failures))
         return
     manifest=plan(cfg,args.scope);dump(BASE/'reports'/('manifest-'+args.scope+'.json'),manifest)
     if args.ship:
