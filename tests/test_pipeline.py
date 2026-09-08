@@ -33,6 +33,22 @@ class PipelineTests(unittest.TestCase):
                 self.assertEqual(ini.first(gameplay['loadout'],'nickname'),'active')
             finally:ini.ROOT=old
 
+    def test_mission_loadouts_are_never_candidates(self):
+        from run import plan
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);old=ini.ROOT
+            try:
+                for folder in ['EXE','DATA/SHIPS','DATA/ships/utility','DATA/MISSIONS']:(root/folder).mkdir(parents=True,exist_ok=True)
+                (root/'EXE/freelancer.ini').write_text('[Data]\nships = SHIPS/shiparch.ini\nloadouts = SHIPS/loadouts.ini\n')
+                (root/'DATA/SHIPS/shiparch.ini').write_text('[Ship]\nnickname = gameplay\nDA_archetype = ships/utility/model.cmp\n')
+                (root/'DATA/SHIPS/loadouts.ini').write_text('[Loadout]\nnickname = gameplay\narchetype = gameplay\n')
+                (root/'DATA/MISSIONS/loadouts.ini').write_text('[Loadout]\nnickname = MSN99_wrong\narchetype = gameplay\n')
+                (root/'DATA/ships/utility/model.cmp').write_bytes(b'fixture')
+                ship=plan({'game':td,'liberty_loadouts':{}},'all')['ships'][0]
+                self.assertEqual(ini.first(ship['loadout'],'nickname'),'gameplay')
+                self.assertNotIn('MSN99_wrong',ship['loadout_choices'])
+            finally:ini.ROOT=old
+
     def test_text_and_bini_preserve_repeated_equipment(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td);old=ini.ROOT;ini.ROOT=root

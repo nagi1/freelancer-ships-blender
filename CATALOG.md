@@ -58,19 +58,19 @@ Files are grouped by faction or shared ship family. `all` is only a command sele
 | liberty | [li_cruiser.blend](ships/liberty/li_cruiser.blend) | li_n_li_cruiser | 3 |
 | liberty | [li_dreadnought.blend](ships/liberty/li_dreadnought.blend) | li_n_li_dreadnought | 3 |
 | liberty | [li_elite.blend](ships/liberty/li_elite.blend) | li_n_li_elite_loadout02 | 27 |
-| liberty | [li_elite2.blend](ships/liberty/li_elite2.blend) | MSN03_Juni | 24 |
+| liberty | [li_elite2.blend](ships/liberty/li_elite2.blend) | li_n_li_elite_loadout02 | 24 |
 | liberty | [li_fighter.blend](ships/liberty/li_fighter.blend) | li_p_li_fighter_loadout01 | 15 |
 | liberty | [li_freighter.blend](ships/liberty/li_freighter.blend) | co_li_freighter_loadout01 | 22 |
-| nomads | [no_battleship.blend](ships/nomads/no_battleship.blend) | MSN10_Nomad_Battleship | 0 |
+| nomads | [no_battleship.blend](ships/nomads/no_battleship.blend) | No source loadout | 0 |
 | nomads | [no_fighter.blend](ships/nomads/no_fighter.blend) | no_fighter_loadout01 | 0 |
-| nomads | [no_gunboat.blend](ships/nomads/no_gunboat.blend) | MSN10_Nomad_Gunboat | 0 |
-| order | [or_elite.blend](ships/order/or_elite.blend) | MSN01a_Order_Heavy_Fighter | 18 |
-| order | [or_osiris.blend](ships/order/or_osiris.blend) | MSN10_Battleship_Osiris | 2 |
+| nomads | [no_gunboat.blend](ships/nomads/no_gunboat.blend) | No source loadout | 0 |
+| order | [or_elite.blend](ships/order/or_elite.blend) | No source loadout | 18 |
+| order | [or_osiris.blend](ships/order/or_osiris.blend) | or_osiris | 2 |
 | outcasts | [pi_elite.blend](ships/outcasts/pi_elite.blend) | fc_lr_pi_elite_loadout01 | 20 |
 | outcasts | [pi_fighter.blend](ships/outcasts/pi_fighter.blend) | fc_lr_pi_fighter_loadout01 | 12 |
 | outcasts | [pi_freighter.blend](ships/outcasts/pi_freighter.blend) | fc_lr_pi_freighter_loadout01 | 21 |
-| rheinland | [rh_battleship.blend](ships/rheinland/rh_battleship.blend) | MSN05_Nomad_Rheinland_Battleship | 2 |
-| rheinland | [rh_cruiser.blend](ships/rheinland/rh_cruiser.blend) | MSN01a_Donau | 0 |
+| rheinland | [rh_battleship.blend](ships/rheinland/rh_battleship.blend) | rh_battleship | 2 |
+| rheinland | [rh_cruiser.blend](ships/rheinland/rh_cruiser.blend) | rh_cruiser | 0 |
 | rheinland | [rh_elite.blend](ships/rheinland/rh_elite.blend) | rh_n_rh_elite_loadout01 | 28 |
 | rheinland | [rh_fighter.blend](ships/rheinland/rh_fighter.blend) | rh_p_rh_fighter_loadout01 | 21 |
 | rheinland | [rh_freighter.blend](ships/rheinland/rh_freighter.blend) | co_rh_freighter_loadout01 | 24 |
@@ -83,7 +83,7 @@ Files are grouped by faction or shared ship family. `all` is only a command sele
 | utility | [ge_lifter.blend](ships/utility/ge_lifter.blend) | co_ge_lifter_loadout01 | 3 |
 | utility | [ge_liner.blend](ships/utility/ge_liner.blend) | ge_liner_co_01 | 3 |
 | utility | [ge_miner.blend](ships/utility/ge_miner.blend) | ge_miner_co_01 | 2 |
-| utility | [ge_prison.blend](ships/utility/ge_prison.blend) | MSN01b_Prison_Ship | 2 |
+| utility | [ge_prison.blend](ships/utility/ge_prison.blend) | No source loadout | 2 |
 | utility | [ge_repair.blend](ships/utility/ge_repair.blend) | co_ge_repair_loadout01 | 9 |
 | utility | [ge_train.blend](ships/utility/ge_train.blend) | co_ge_train_loadout01 | 0 |
 | utility | [ge_transport.blend](ships/utility/ge_transport.blend) | co_ge_transport_loadout01 | 0 |

@@ -69,16 +69,24 @@ def plan(cfg, scope):
             if p not in hashes:hashes[p]=digest(p)
         assets[key]={'id':key,'path':path,'libraries':libs,'sha256':{str(p.relative_to(data)):hashes[p] for p in files}}
         return key
+    def normal_loadout(entry):
+        """Reject campaign, secret, and set-scene records from normal exports."""
+        return not low(f(entry,'nickname')).startswith(('msn','secret','rm_','setscene_'))
     for model,aliases in sorted(groups.items()):
         aliases.sort(key=lambda s:(low(s['file']).replace('\\','/')!='data/ships/shiparch.ini',low(f(s,'nickname'))))
         s=next((s for s in aliases if low(f(s,'nickname'))==Path(model.replace('\\','/')).stem),aliases[0]);nick=f(s,'nickname')
-        choices=[x for x in sections if low(x['section'])=='loadout' and low(f(x,'archetype'))==low(nick) and (low(x['file']).replace('\\','/') in loadout_files or 'missions' in low(x['file']))]
+        # Only use Loadout files registered by freelancer.ini. Mission records are
+        # scenario-specific staging configurations, not a ship's normal equipment.
+        normal=[x for x in sections if low(x['section'])=='loadout' and normal_loadout(x) and low(x['file']).replace('\\','/') in loadout_files]
+        choices=[x for x in normal if low(f(x,'archetype'))==low(nick)]
         selected=cfg['liberty_loadouts'].get(nick)
         if selected:
-            load=next((x for x in choices if low(f(x,'nickname'))==low(selected)),None)
+            # li_elite2 is the campaign hero hull. It has no ordinary record of
+            # its own, so its explicit config reuses the normal Elite loadout.
+            load=next((x for x in normal if low(f(x,'nickname'))==low(selected)),None)
             if not load:raise ValueError('Configured loadout missing: '+selected)
         else:
-            choices.sort(key=lambda x:(not low(f(x,'nickname')).endswith('loadout01'),low(f(x,'nickname')),low(x['file'])))
+            choices.sort(key=lambda x:(low(f(x,'nickname'))!=low(nick),not low(f(x,'nickname')).endswith('loadout01'),low(f(x,'nickname')).startswith(('msn','secret','rm_')),low(f(x,'nickname')),low(x['file'])))
             load=choices[0] if choices else None
         mounts=[];dependencies=[];seen=set();queue=deque([s]+([load] if load else []))
         while queue:

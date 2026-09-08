@@ -46,12 +46,12 @@ Open files from `ships/liberty/`:
 | --- | --- | --- |
 | `li_fighter.blend` | Patriot | `li_p_li_fighter_loadout01` |
 | `li_elite.blend` | Defender | `li_n_li_elite_loadout02` |
-| `li_elite2.blend` | Juni's Defender variant | `MSN03_Juni` |
+| `li_elite2.blend` | Juni's Defender variant | `li_n_li_elite_loadout02` |
 | `li_freighter.blend` | Rhino | `co_li_freighter_loadout01` |
 | `li_cruiser.blend` | Liberty cruiser | `li_n_li_cruiser` |
 | `li_dreadnought.blend` | Liberty dreadnought | `li_n_li_dreadnought` |
 
-Aliases sharing a hull are recorded in the manifest instead of producing duplicate files. Loadouts are explicit selections, not a claim of one universal canonical configuration; Juni's is mission-specific.
+Aliases sharing a hull are recorded in the manifest instead of producing duplicate files. Batch exports only select normal registered ship loadouts; campaign, secret, set-scene, and `rm_` records are excluded. Juni's variant uses the normal Defender loadout because it has no ordinary loadout record of its own.
 
 `ships/elet.blend` is the original hand-built Defender reference and is not overwritten by batch builds. Save manual edits to generated ships under a different filename before rebuilding.
 
