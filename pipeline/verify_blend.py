@@ -11,6 +11,15 @@ assert any(o.type=='LIGHT' for o in s.objects)
 for light in r['fx'].get('lights',[]):
     matches=[o for o in s.objects if o.get('navigation_light') and o.parent and o.parent.name==light['hardpoint']]
     assert len(matches)==(2 if light['enabled'] else 0),('Navigation light mismatch',light)
+controller=bpy.data.objects.get('Ship_Controls')
+headlights=[o for o in s.objects if o.get('navigation_light') and o.parent and 'headlight' in o.parent.name.lower()]
+if headlights:
+    assert controller and 'headlight_on' in controller
+    for state in [False,True]:
+        controller['headlight_on']=state;controller.update_tag();s.frame_set(1);bpy.context.view_layer.update()
+        for o in headlights:
+            mask=next(n for n in o.data.materials[0].node_tree.nodes if n.type=='MATH')
+            assert mask.inputs[1].default_value==float(state),('Headlight toggle failed',o.name,state)
 assert s.render.threads<=2
 assert all(i.packed_file for i in bpy.data.images if i.source=='FILE')
 assert len(s.objects)==r['objects']

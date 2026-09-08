@@ -1,5 +1,10 @@
 # Freelancer to Blender
 
+Headlight switch: select `Ship_Controls` → Object Properties → Custom Properties.
+Toggle `headlight_on` and adjust `headlight_brightness`. Both can be keyframed.
+Python/MCP: `bpy.data.objects["Ship_Controls"]["headlight_on"] = False` (or `True`).
+The saved drivers require no add-on. Red docking lights remain off.
+
 Local, deterministic extraction. No AI, API keys, network calls, or token use at runtime.
 Uses the installed LibreLancer 2025.11 CPU model exporter and background Blender.
 Source: https://github.com/Librelancer/Librelancer/tree/2025.11

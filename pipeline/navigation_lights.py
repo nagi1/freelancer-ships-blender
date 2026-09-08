@@ -3,6 +3,27 @@ import bpy
 from pathlib import Path
 from ini import first
 
+def wire_light_controls():
+    controller=bpy.data.objects.get('Ship_Controls')
+    if not controller:
+        controller=bpy.data.objects.new('Ship_Controls',None);bpy.context.scene.collection.objects.link(controller)
+    if 'headlight_on' not in controller:controller['headlight_on']=True
+    if 'headlight_brightness' not in controller:controller['headlight_brightness']=1.0
+    controller.id_properties_ui('headlight_on').update(description='Enable the white ship headlight bulb and glow; supports keyframes')
+    controller.id_properties_ui('headlight_brightness').update(min=0,max=10,soft_max=3,description='Headlight emission multiplier; supports keyframes')
+    count=0
+    for obj in bpy.data.objects:
+        if not obj.get('navigation_light') or not obj.parent or 'headlight' not in obj.parent.name.lower():continue
+        mat=obj.data.materials[0];nodes=mat.node_tree.nodes
+        strength=next(n for n in nodes if n.type=='MATH')
+        emission=next(n for n in nodes if n.type=='EMISSION')
+        for socket,key in [(strength.inputs[1],'headlight_on'),(emission.inputs['Strength'],'headlight_brightness')]:
+            driver=socket.driver_add('default_value').driver
+            for var in list(driver.variables):driver.variables.remove(var)
+            var=driver.variables.new();var.name='value';var.type='SINGLE_PROP';var.targets[0].id=controller;var.targets[0].data_path='["'+key+'"]';driver.expression='value'
+        count+=1
+    return count
+
 def build_lights(job,hardpoints):
     ship=job['ship'];textures=Path(job['base'])/'cache/textures'
     definitions={str(first(d,'nickname')).lower():d for d in ship['dependencies'] if d['section'].lower()=='light'}
@@ -46,4 +67,7 @@ def build_lights(job,hardpoints):
             if bpy.context.scene.camera:
                 con=obj.constraints.new('TRACK_TO');con.target=bpy.context.scene.camera;con.track_axis='TRACK_Z';con.up_axis='UP_Y'
         records.append({'hardpoint':hp.name,'enabled':True,'nickname':mount['nickname']})
+    wire_light_controls()
+    text=bpy.data.texts.get('Headlight_controls') or bpy.data.texts.new('Headlight_controls')
+    text.clear();text.write('HEADLIGHT CONTROL\nSelect Ship_Controls, then Object Properties > Custom Properties.\nToggle headlight_on; adjust headlight_brightness. Right-click either property to insert a keyframe.\nPython or MCP: bpy.data.objects["Ship_Controls"]["headlight_on"] = False\nTurn on with True. This switch controls both the original bulb and glow.\nNo add-on or startup script is required: native Blender drivers are saved in this file.\nOther engines/exporters must map these properties to their own light system.\n')
     return records
