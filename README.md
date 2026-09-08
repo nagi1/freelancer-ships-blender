@@ -1,60 +1,203 @@
 # Freelancer to Blender
 
-Headlight switch: select `Ship_Controls` → Object Properties → Custom Properties.
-Toggle `headlight_on` and adjust `headlight_brightness`. Both can be keyframed.
-Python/MCP: `bpy.data.objects["Ship_Controls"]["headlight_on"] = False` (or `True`).
-The saved drivers require no add-on. Red docking lights remain off.
+A local, deterministic pipeline that builds self-contained Blender ships from original Freelancer assets: hulls, mounted equipment, packed textures, native animations, animated effects and working light controls.
 
-Local, deterministic extraction. No AI, API keys, network calls, or token use at runtime.
-Uses the installed LibreLancer 2025.11 CPU model exporter and background Blender.
-Source: https://github.com/Librelancer/Librelancer/tree/2025.11
+**No AI, API keys, network calls or token usage at runtime.** Blender MCP is useful for development but is not required to build or use the files.
 
-Run from PowerShell:
+**Validated scope:** six Liberty hulls. All six passed saved-file verification; unchanged reruns use the cache. Full-game scope is implemented but remains experimental and unvalidated.
 
-```powershell
-./run.ps1 plan
-./run.ps1 build
-./run.ps1 verify
-```
+## Quick start
 
-Default scope is Liberty: six distinct hulls (Patriot, Defender, Juni's Defender,
-Rhino, cruiser, dreadnought). Story/cinematic aliases sharing these models are
-recorded in the manifest instead of producing duplicate hull files.
-Loadouts are explicit in config.json. Juni uses MSN03_Juni, a story configuration;
-there is no universal canonical loadout for every hull.
+### Requirements
 
-Generated files: ships/liberty/*.blend. Existing hand-assembled elet.blend is in
-ships/elet.blend and is never overwritten by the batch pipeline.
+- Windows and PowerShell.
+- A local Freelancer installation with `DATA/` and `EXE/`.
+- [LibreLancer SDK 2025.11](https://github.com/Librelancer/Librelancer/tree/2025.11), including `lleditscript.exe` and its `lib/` directory.
+- Blender 5.2 with bundled Python; tested with Blender 5.2.1.
+- Git for development. No additional Python packages are required.
 
-Budget: one worker, at most two logical CPUs via Windows process affinity,
-below-normal priority, two Blender threads, per-process timeout. No rendering,
-GPU conversion, texture upscaling, or simulation baking. Files open in EEVEE Rendered shading with scene lighting, a fitted camera and bounded animated FX visible. Hide the FX collection or switch to Solid for the cheapest editing mode.
-No promise of a particular Task Manager percentage: other programs and GPU clocks
-affect that number.
+Edit [config.json](config.json) for your machine before running. The checked-in paths describe the current workstation; nothing is downloaded automatically.
 
-Native models, textures, hardpoints, LODs, SUR and animation actions are retained.
-Equipment uses ship hardpoints and inverse equipment HpConnect, never eyeballed
-coordinates. Effects and fuses are traced and embedded as data. Unsupported FX
-are reported, never silently claimed to be exact imports.
+| Setting | Description |
+| --- | --- |
+| `game` | Freelancer installation root, not its `DATA` directory |
+| `sdk` | Directory containing `lleditscript.exe` |
+| `blender` | Full path to `blender.exe` |
+| `threads` | Worker allowance, clamped to 1–2 logical CPUs |
+| `timeout_seconds` | Per-worker timeout; default 600 seconds |
+| `liberty_loadouts` | Explicit ship nickname → loadout nickname selections |
 
-Inputs and tool/script hashes control caching; unchanged builds skip work. JSON
-manifests/validation are stable and sorted. Blender files are semantically
-deterministic, not guaranteed byte-identical (Blender stores internal IDs).
-Game assets and generated binaries are ignored by Git; code and config are tracked.
-The hand-assembled `ships/elet.blend` is explicitly tracked as the reference baseline.
-
-Validation reopens each saved file in a bounded background Blender process and
-checks packed images, full attachment matrices, persisted native actions and
-lightweight viewport settings. Regression tests:
+The launcher currently expects Python at `5.2/python/bin/python.exe` beside `blender.exe`. Other Blender versions require a launcher update and validation. Only `config.json` is loaded; the Git-ignored `config.local.json` is not an implemented override.
 
 ```powershell
-& 'C:/Program Files/Blender Foundation/Blender 5.2/5.2/python/bin/python.exe' tests/test_pipeline.py
+Set-Location C:\Games\freelancer-ships
+.\run.ps1 plan     # Inspect selection and dependencies.
+.\run.ps1 build    # Build changed inputs; reuse unchanged outputs.
+.\run.ps1 verify   # Reopen saved files and test their behavior.
 ```
 
-The initial six-file build, saved-file validation and unchanged-build cache test
-passed. See EXPERIMENT.md for the measured inventory and scope limits.
+Commands return a nonzero exit code on failure. Run `verify` after `build`: assembly checks and reopened-file verification are separate steps.
 
-Future full-game run: `./run.ps1 plan -Scope all`, review the selected loadouts,
-then `./run.ps1 build -Scope all`. Only Liberty is built for this experiment.
+## Liberty outputs
 
+Open files from `ships/liberty/`:
 
+| File | Ship | Selected loadout |
+| --- | --- | --- |
+| `li_fighter.blend` | Patriot | `li_p_li_fighter_loadout01` |
+| `li_elite.blend` | Defender | `li_n_li_elite_loadout02` |
+| `li_elite2.blend` | Juni's Defender variant | `MSN03_Juni` |
+| `li_freighter.blend` | Rhino | `co_li_freighter_loadout01` |
+| `li_cruiser.blend` | Liberty cruiser | `li_n_li_cruiser` |
+| `li_dreadnought.blend` | Liberty dreadnought | `li_n_li_dreadnought` |
+
+Aliases sharing a hull are recorded in the manifest instead of producing duplicate files. Loadouts are explicit selections, not a claim of one universal canonical configuration; Juni's is mission-specific.
+
+`ships/elet.blend` is the original hand-built Defender reference and is not overwritten by batch builds. Save manual edits to generated ships under a different filename before rebuilding.
+
+## Using the ships in Blender
+
+### View and animate
+
+Files open in **EEVEE Rendered** shading with scene lighting, a world, a fitted camera and visible animated effects. Cycles is not required.
+
+Press **Space** over the viewport to play frames 1–240 at 24 fps:
+
+| Timeline | Behavior |
+| --- | --- |
+| Frame 24 onward | Native door opening, when present |
+| After opening and a short hold | Native clip reversed to close doors |
+| Frames 72–120 | First weapon recoil/muzzle-effect burst |
+| Frames 168–216 | Second firing burst |
+| Outside firing bursts | Weapon resting pose |
+
+Door duration comes from each asset; capital ships take longer than the Defender. Only available native clips and equipment-requested recoil are scheduled.
+
+### Headlight controls
+
+1. Find **Ship_Controls** in the Outliner and select it.
+2. Open **Object Properties → Custom Properties**.
+3. Toggle **headlight_on** or adjust **headlight_brightness**.
+
+Right-click either property to insert keyframes. Both the bulb and glow follow the switch. Running lights are enabled; red docking/entry lights stay off.
+
+The same controls work through Blender Python or MCP:
+
+```python
+import bpy
+controls = bpy.data.objects["Ship_Controls"]
+controls["headlight_on"] = False  # True restores the headlight.
+controls["headlight_brightness"] = 1.0
+controls.keyframe_insert(data_path='["headlight_on"]')  # Optional.
+```
+
+The saved drivers need no add-on or startup script. Other engines/exporters must map these properties to their own lighting system.
+
+### Scene organization
+
+- `Freelancer_Ship` contains the hull, equipment, hardpoints, lights and effects.
+- `Ship_LODs`, `Ship_Collision` and `Damage_References` preserve reference geometry separately and start excluded.
+- `FX` contains animated engine, thruster, contrail and muzzle previews.
+- `Lights` contains navigation bulbs/glows. `Preview_Studio` holds presentation lights and the camera separately from the ship.
+- Blender Text Editor datablocks `READ_ME`, `Freelancer_manifest.json`, `Build_report.json` and `Headlight_controls` describe provenance and usage.
+
+## Performance
+
+Batch workers run sequentially at below-normal priority with Windows affinity restricted to at most two logical CPUs, bounded library thread settings and a timeout. The pipeline does not automatically render, upscale textures or bake simulations.
+
+Generated scenes use EEVEE with 8 viewport samples, 32 render samples and ray tracing disabled. Particle previews are capped at eight particles per emitter. Switch to **Solid** and disable `FX` for the cheapest editing mode.
+
+Worker limits do not restrict an independently opened interactive Blender window. Visible transparent effects still consume GPU time; utilization depends on clocks, viewport activity and other applications.
+
+## Commands and troubleshooting
+
+| Command | Purpose |
+| --- | --- |
+| `.\run.ps1 plan` | Write `reports/manifest-liberty.json` without building ships |
+| `.\run.ps1 build` | Build Liberty using cached inputs where possible |
+| `.\run.ps1 build -Force` | Force model conversion and ship assembly; unchanged ALE samples may still be cached |
+| `.\run.ps1 verify` | Reopen and validate reported Liberty files without rendering |
+| `.\run.ps1 plan -Scope all` | Inspect experimental full-game selection |
+| `.\run.ps1 build -Scope all` | Build that scope after reviewing its manifest |
+| `.\run.ps1 verify -Scope all` | Verify saved full-game outputs |
+
+Input, exporter, pipeline and Blender hashes control cache reuse. `cached` means the existing output matches its stored build signature. This is deterministic assembly, not guaranteed byte-identical Blender files. The cache does not detect manual edits to output files; use verification or rebuild as appropriate.
+
+| Location | Contents |
+| --- | --- |
+| `cache/models/` | Converted GLBs and cache stamps |
+| `cache/ale/`, `cache/textures/` | Sampled effects and extracted textures |
+| `cache/convert.log`, `cache/effects.log` | Converter diagnostics |
+| `cache/<ship>.log` | Blender assembly diagnostics |
+| `cache/verify-<ship>.log` | Reopened-file verification diagnostics |
+| `reports/manifest-<scope>.json` | Selected ships, dependencies and input hashes |
+| `reports/<scope>/<ship>.json` | Build reports |
+| `ships/<scope>/` | Generated Blender files |
+
+For startup failures, check installation paths and the bundled Python location. For worker failures, read the log named in the error. Resolve missing source references or hardpoints rather than disabling checks or positioning equipment by eye.
+
+## Developer guide
+
+### Architecture
+
+```text
+Game INIs and native assets
+  → dependency manifest and loadout selection
+  → cached CPU model conversion and ALE sampling
+  → fresh background Blender assembly
+  → packed .blend and build report
+  → saved-file verification
+```
+
+| Module | Responsibility |
+| --- | --- |
+| `pipeline/run.py` | CLI, dependency resolution, caching and bounded workers |
+| `pipeline/ini.py`, `pipeline/utf.py` | Text/BINI and UTF resource parsing |
+| `pipeline/build_blend.py` | Scene assembly, mounts, native actions and packing |
+| `pipeline/build_fx.py` | Effect resolution, sampling and preview construction |
+| `pipeline/fx_runtime.py` | Reference-derived Geometry Nodes particle animation |
+| `pipeline/animation_preview.py` | Two-burst playback, EEVEE lighting and camera |
+| `pipeline/navigation_lights.py` | Bulbs/glows, inherited properties and headlight controls |
+| `pipeline/verify_blend.py` | Saved-file, motion and reference-pose checks |
+| `pipeline/inspect_animation.py` | Local Defender/reference comparison utility |
+
+`reference/convert.csx` and `reference/effects.csx` are active runtime templates, not merely historical examples. Some diagnostic/reference scripts retain workstation paths; the main CLI uses `config.json`. [EXPERIMENT.md](EXPERIMENT.md) records the investigation and subsequent corrections.
+
+Mount equipment using the ship hardpoint and inverse equipment `HpConnect` transform. Preserve source pivots, action slots and base poses; keep collision meshes separate from render meshes.
+
+### Test a change
+
+```powershell
+$cfg = Get-Content -Raw .\config.json | ConvertFrom-Json
+$python = Join-Path (Split-Path $cfg.blender) '5.2/python/bin/python.exe'
+& $python .\tests\test_pipeline.py
+.\run.ps1 build
+.\run.ps1 verify
+.\run.ps1 build  # An unchanged rerun should report cached.
+```
+
+Unit tests cover text/BINI parsing, repeated equipment, shared Effect/VisEffect names and the native muzzle-flash parameter. Saved-file checks cover packed images, mount matrices, native actions, door motion/rest poses, both recoil bursts, sampled particle movement, navigation lights, headlight toggles and EEVEE setup.
+
+The Defender is compared with `tests/defender_reference_motion.json`, sampled from `ships/elet.blend`. Automated checks do not prove every effect looks correct: inspect playback and Rendered shading for visual changes. Keep expensive renders out of the default batch workflow.
+
+## Contributing
+
+1. Create a branch and keep the change focused.
+2. Identify the source INI, nickname, asset and hardpoint for Freelancer-specific behavior. Document approximations explicitly.
+3. Add a regression test for behavioral fixes. Test animation motion and return to rest, not just action counts.
+4. Run relevant tests and saved-file verification. State which ships and tool versions were checked.
+5. Review the diff and commit small, coherent changes. Separate personal path changes from general implementation changes.
+
+Change descriptions should explain the problem, resulting behavior, validation and effects on resource use or source fidelity. For bug reports, include the ship/loadout, frame number, tool versions, reproduction command and relevant log excerpt; screenshots help with visual issues.
+
+Preserve worker limits and offline operation. Do not introduce runtime AI dependencies, invent replacement assets, or update reference fixtures merely to make a failing test pass. Explain intentional reference changes for review.
+
+Cache, reports and generated ships are Git-ignored. `ships/elet.blend` is an explicitly tracked reference exception. Keep the current repository local unless distribution rights for included game-derived assets are resolved. Upstream projects retain their own licenses; this repository currently has no standalone license file.
+
+## Fidelity and limitations
+
+Original meshes, textures, hardpoints, LODs, SUR and native animation actions are retained through conversion. Selected visible equipment and referenced pilot assets use original game data.
+
+Effects use extracted textures and sampled lifetime size/color/opacity curves. Engines sample SParam `.85`, thrusters `1`; particle density is capped and trails approximate straight flight at 80 m/s. These are **Blender recreations, not exact ALE imports**. Blinking, billboard orientation, transparency and flare-cone behavior also contain approximations.
+
+Damage caps and fuse references are retained without automatically playing destruction. Runtime shields, AI aiming, projectile simulation, audio and THN scripting are outside the current reconstruction. Full-game scope needs separate loadout review and validation.
