@@ -6,6 +6,8 @@ s=bpy.context.scene;s.frame_set(1);s.view_layers[0].update()
 r=json.loads(bpy.data.texts['Build_report.json'].as_string())
 assert s.render.engine=='BLENDER_EEVEE'
 assert not s.eevee.use_raytracing
+assert s.camera is not None and s.world is not None
+assert any(o.type=='LIGHT' for o in s.objects)
 assert s.render.threads<=2
 assert all(i.packed_file for i in bpy.data.images if i.source=='FILE')
 assert len(s.objects)==r['objects']

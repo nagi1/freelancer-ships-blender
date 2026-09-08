@@ -5,7 +5,7 @@
 The first batch omitted the second firing burst and hid animated effects. The
 preview now shows both bursts (72–120 and 168–216), with the reference ALE
 Geometry Nodes implementation retaining lifetime size/color/alpha curves at an
-eight-particle budget. Thrusters use SParam 1; engines use .85. Material Preview
+eight-particle budget. Thrusters use SParam 1; engines use .85. EEVEE Rendered preview
 and FX are enabled when files open. Hide FX or use Solid for minimum viewport cost.
 
 Validation now checks actual motion and return-to-rest poses, using each ship's
@@ -57,7 +57,7 @@ Blender window is separate and is not affinity-limited by the batch pipeline.
   reproduced by this experiment.
 - Native animation actions are retained. Only available native door and
   equipment-requested recoil clips are put onto the demonstration timeline.
-- FX are excluded by default. Enable the FX collection and use Material Preview
+- FX are excluded by default. Enable the FX collection and use EEVEE Rendered preview
   to inspect them. Default solid viewing avoids transparent overdraw entirely.
 - Full-game scope is implemented but has not been executed or validated yet.
 
@@ -69,3 +69,4 @@ rendering. No AI, Blender MCP, network service or token consumption is involved.
 
 The original hand-assembled rendered Defender was moved from Downloads to
 ships/elet.blend. It remains distinct from the inexpensive generated li_elite.blend.
+
