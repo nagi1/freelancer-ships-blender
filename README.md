@@ -126,6 +126,19 @@ Worker limits do not restrict an independently opened interactive Blender window
 | `.\run.ps1 plan -Scope all` | Inspect experimental full-game selection |
 | `.\run.ps1 build -Scope all` | Build that scope after reviewing its manifest |
 | `.\run.ps1 verify -Scope all` | Verify saved full-game outputs |
+| `.\run.ps1 build -Scope all -Ship ge_transport` | Rebuild one selected ship using the shared asset cache |
+| `.\run.ps1 verify -Scope all -Ship ge_transport` | Reopen and verify that ship only |
+
+The current source is **Freelancer HD Edition**. Read [SOURCE_AUDIT.md](SOURCE_AUDIT.md)
+for the registered loadout files, RTC model handling and UTILITY coverage.
+`loadouts_regen.ini` is audited but is not registered by this installation.
+The full manifest contains 64 distinct registered models, including RTC props.
+Aliases sharing a model do not create duplicate files. Equipment choices and
+cargo metadata are embedded in each file; a model without a matching loadout
+does not receive guessed equipment.
+
+Model conversion uses batches of twelve assets with per-asset checkpoints.
+Rerun the same command after correcting a failure to reuse completed assets.
 
 Input, exporter, pipeline and Blender hashes control cache reuse. `cached` means the existing output matches its stored build signature. This is deterministic assembly, not guaranteed byte-identical Blender files. The cache does not detect manual edits to output files; use verification or rebuild as appropriate.
 

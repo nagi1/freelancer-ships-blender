@@ -157,10 +157,11 @@ def convert(manifest,cfg,force):
         print('Converted assets:',min(offset+12,len(todo)),'/',len(todo),flush=True)
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('command',choices=['plan','build','verify']);ap.add_argument('--scope',choices=['liberty','all'],default='liberty');ap.add_argument('--force',action='store_true');args=ap.parse_args()
+    ap=argparse.ArgumentParser();ap.add_argument('command',choices=['plan','build','verify']);ap.add_argument('--scope',choices=['liberty','all'],default='liberty');ap.add_argument('--ship',action='append',help='Limit work to an exact manifest nickname; repeatable');ap.add_argument('--force',action='store_true');args=ap.parse_args()
     cfg=json.loads((BASE/'config.json').read_text());cfg['threads']=max(1,min(2,int(cfg['threads'])))
     if args.command=='verify':
         reports=sorted((BASE/'reports'/args.scope).glob('*.json'))
+        if args.ship:reports=[p for p in reports if p.stem in args.ship]
         if not reports:raise RuntimeError('No build reports')
         for p in reports:
             r=json.loads(p.read_text());assert r['valid'],r;assert Path(r['output']).exists()
@@ -168,6 +169,10 @@ def main():
             print(p.stem,'PASS (reopened from disk)',flush=True)
         return
     manifest=plan(cfg,args.scope);dump(BASE/'reports'/('manifest-'+args.scope+'.json'),manifest)
+    if args.ship:
+        unknown=set(args.ship)-{s['nickname'] for s in manifest['ships']}
+        if unknown:raise ValueError('Unknown ships: '+', '.join(sorted(unknown)))
+        manifest['ships']=[s for s in manifest['ships'] if s['nickname'] in args.ship]
     print('Ships:',', '.join(s['nickname'] for s in manifest['ships']),'| Unique assets:',len(manifest['assets']),flush=True)
     if args.command=='plan':return
     convert(manifest,cfg,args.force)
