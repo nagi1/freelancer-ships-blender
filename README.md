@@ -4,7 +4,7 @@ A local, deterministic pipeline that builds self-contained Blender ships from or
 
 **No AI, API keys, network calls or token usage at runtime.** Blender MCP is useful for development but is not required to build or use the files.
 
-**Validated scope:** six Liberty hulls. All six passed saved-file verification; unchanged reruns use the cache. Full-game scope is implemented but remains experimental and unvalidated.
+**Validated scope:** 64 registered Freelancer HD Edition models across 13 faction/family folders. All 64 passed saved-file verification. See [CATALOG.md](CATALOG.md) for files and loadouts, and [SOURCE_AUDIT.md](SOURCE_AUDIT.md) for source selection.
 
 ## Quick start
 
@@ -123,7 +123,7 @@ Worker limits do not restrict an independently opened interactive Blender window
 | `.\run.ps1 build` | Build Liberty using cached inputs where possible |
 | `.\run.ps1 build -Force` | Force model conversion and ship assembly; unchanged ALE samples may still be cached |
 | `.\run.ps1 verify` | Reopen and validate reported Liberty files without rendering |
-| `.\run.ps1 plan -Scope all` | Inspect experimental full-game selection |
+| `.\run.ps1 plan -Scope all` | Inspect the full-game selection |
 | `.\run.ps1 build -Scope all` | Build that scope after reviewing its manifest |
 | `.\run.ps1 verify -Scope all` | Verify saved full-game outputs |
 | `.\run.ps1 build -Scope all -Ship ge_transport` | Rebuild one selected ship using the shared asset cache |
@@ -232,4 +232,11 @@ to NaN at the exact birth endpoint; that one sample uses its nearest finite colo
 Raw sampled data remains available in the cache. Hardpoint-only equipment such
 as the Nomad thruster is preserved without inventing a mesh.
 
-Damage caps and fuse references are retained without automatically playing destruction. Runtime shields, AI aiming, projectile simulation, audio and THN scripting are outside the current reconstruction. Full-game scope needs separate loadout review and validation.
+Damage caps and fuse references are retained without automatically playing destruction. Runtime shields, AI aiming, general projectile simulation, audio and THN scripting are outside the current reconstruction. The cruiser's explicitly supported forward-gun preview uses source projectile speed and timing.
+
+The full-game run converted 237 shared assets and saved 64 files (about 2.57 GiB
+with packed textures). Assembly reported no missing mounts, missing textures or
+unresolved requested effects. Every file was reopened to check packed assets,
+mount transforms, stored actions, scheduled animation, particle clocks, light
+controls and EEVEE defaults. These checks do not claim pixel-identical rendering
+to Freelancer or a guaranteed GPU utilization percentage.
