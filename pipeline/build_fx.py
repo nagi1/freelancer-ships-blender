@@ -103,26 +103,8 @@ def build_fx(job,cols,hardpoints,equipment):
             before=len(runtime.fxrecords)
             runtime.make_effect(file,effect['Name'],hp.name,cols['FX'],control,req['key']=='flash_particle_name',5 if req['kind']=='thruster' else 2)
             report['created'].extend(runtime.fxrecords[before:])
-    # Inherited INI light properties; compact original texture cards, no scene lights.
-    defs={str(first(d,'nickname')).lower():d for d in ship['dependencies'] if d['section'].lower()=='light'}
-    for m,r,objs in equipment:
-        if m['definition']['section'].lower()!='light':continue
-        hp=hardpoints.get(str(m['hardpoint']).lower())
-        if not hp:continue
-        d=m['definition'];props={};seen=set()
-        while d and str(first(d,'nickname')).lower() not in seen:
-            seen.add(str(first(d,'nickname')).lower())
-            for k,val in d['entries']:props.setdefault(k.lower(),val)
-            d=defs.get(str(first(d,'inherit')).lower())
-        color=tuple(float(x)/255 for x in props.get('color',[255,255,255]))
-        mat=material('Light::'+hp.name,'bulb',color,1)
-        if mat:
-            card('Light::'+hp.name,hp,float(props.get('bulb_size',[.1])[0]),mat)
-            mask=next(n for n in mat.node_tree.nodes if n.type=='MATH')
-            if 'docklight' in hp.name.lower():mask.inputs[1].default_value=0
-            elif 'avg_delay' in props and 'blink_duration' in props:
-                delay=float(props['avg_delay'][0])*24;duration=float(props['blink_duration'][0])*24
-                fc=mask.inputs[1].driver_add('default_value');fc.driver.expression=f'1 if frame%{max(.1,delay+duration):.9g}<{duration:.9g} else .25'
+    from navigation_lights import build_lights
+    report['lights']=build_lights(job,hardpoints)
     # EEVEE-compatible alpha blending: no stochastic dither, no transparent shadows.
     for m in bpy.data.materials:
         if not m.use_nodes or not m.get('accuracy'):continue
@@ -135,5 +117,6 @@ def build_fx(job,cols,hardpoints,equipment):
     for o in cols['FX'].all_objects:o.visible_shadow=False
     report['accuracy']='RECREATED_FROM_FREELANCER_ALE; reference Geometry Nodes animation with sampled size/color/alpha; eight particles per emitter; engine SParam .85 and thruster 1; straight-flight trails'
     return report
+
 
 

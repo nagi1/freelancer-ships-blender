@@ -21,6 +21,10 @@ def configure_rendered_view():
     if not cam:cam=bpy.data.objects.new('Preview_Camera',bpy.data.cameras.new('Preview_Camera'));studio.objects.link(cam)
     cam.location=center+Vector((1.2,1.6,.9)).normalized()*radius*3.8
     cam.rotation_euler=(center-cam.location).to_track_quat('-Z','Y').to_euler();cam.data.lens=45;cam.data.clip_end=max(10000,radius*30);scene.camera=cam
+    for obj in bpy.data.objects:
+        if obj.get('navigation_light'):
+            con=next((c for c in obj.constraints if c.type=='TRACK_TO'),None) or obj.constraints.new('TRACK_TO')
+            con.target=cam;con.track_axis='TRACK_Z';con.up_axis='UP_Y'
     scene.render.engine='BLENDER_EEVEE';scene.eevee.taa_samples=8;scene.eevee.taa_render_samples=32;scene.eevee.use_raytracing=False
     scene.render.resolution_x=1200;scene.render.resolution_y=900;scene.render.resolution_percentage=100
     for screen in bpy.data.screens:

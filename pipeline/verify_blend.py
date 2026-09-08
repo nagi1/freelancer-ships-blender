@@ -8,6 +8,9 @@ assert s.render.engine=='BLENDER_EEVEE'
 assert not s.eevee.use_raytracing
 assert s.camera is not None and s.world is not None
 assert any(o.type=='LIGHT' for o in s.objects)
+for light in r['fx'].get('lights',[]):
+    matches=[o for o in s.objects if o.get('navigation_light') and o.parent and o.parent.name==light['hardpoint']]
+    assert len(matches)==(2 if light['enabled'] else 0),('Navigation light mismatch',light)
 assert s.render.threads<=2
 assert all(i.packed_file for i in bpy.data.images if i.source=='FILE')
 assert len(s.objects)==r['objects']
