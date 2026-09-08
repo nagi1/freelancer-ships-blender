@@ -133,6 +133,12 @@ The current source is **Freelancer HD Edition**. Read [SOURCE_AUDIT.md](SOURCE_A
 for the registered loadout files, RTC model handling and UTILITY coverage.
 `loadouts_regen.ini` is audited but is not registered by this installation.
 The full manifest contains 64 distinct registered models, including RTC props.
+`all` is a build selector only. Files are saved under `ships/<group>/<nickname>.blend`:
+`liberty`, `bretonia`, `kusari`, `rheinland`, `corsairs`, `outcasts`, `order`,
+`nomads`, `bounty_hunters`, `border_worlds`, `civilian`, `utility`, and `cinematic`.
+Shared civilian, Border Worlds and utility hulls use ship-family groups because
+they are operated by multiple factions. Legacy source folders named `pirate`
+and `corsair` map to Corsairs and Outcasts respectively.
 Aliases sharing a model do not create duplicate files. Equipment choices and
 cargo metadata are embedded in each file; a model without a matching loadout
 does not receive guessed equipment.
@@ -219,5 +225,11 @@ Cache, reports and generated ships are Git-ignored. `ships/elet.blend` is an exp
 Original meshes, textures, hardpoints, LODs, SUR and native animation actions are retained through conversion. Selected visible equipment and referenced pilot assets use original game data.
 
 Effects use extracted textures and sampled lifetime size/color/opacity curves. Engines sample SParam `.85`, thrusters `1`; particle density is capped and trails approximate straight flight at 80 m/s. These are **Blender recreations, not exact ALE imports**. Blinking, billboard orientation, transparency and flare-cone behavior also contain approximations.
+
+TXM animated atlases use their source frame rectangles and FPS, driven by particle
+age through a compact shader lookup. A Kusari engine ALE color curve evaluates
+to NaN at the exact birth endpoint; that one sample uses its nearest finite color.
+Raw sampled data remains available in the cache. Hardpoint-only equipment such
+as the Nomad thruster is preserved without inventing a mesh.
 
 Damage caps and fuse references are retained without automatically playing destruction. Runtime shields, AI aiming, projectile simulation, audio and THN scripting are outside the current reconstruction. Full-game scope needs separate loadout review and validation.

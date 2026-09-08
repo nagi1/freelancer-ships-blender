@@ -5,6 +5,15 @@ import ini
 from build_fx import resolve_effect,effect_requests
 
 class PipelineTests(unittest.TestCase):
+    def test_output_groups_follow_factions_instead_of_scope(self):
+        from run import ship_group
+        for nick,path,expected in [('li_elite','ships/liberty/li_elite/li_elite.cmp','liberty'),
+                                   ('co_elite','ships/pirate/pi_elite/pi_elite.cmp','corsairs'),
+                                   ('pi_elite','ships/corsair/co_elite/co_elite.cmp','outcasts'),
+                                   ('ge_transport','ships/utility/transport_small/transport_small.cmp','utility'),
+                                   ('rtcprop_demo','ships/border_world/demo.cmp','cinematic')]:
+            self.assertEqual(ship_group({'nickname':nick,'ship':{'entries':[['DA_archetype',[path]]]}}),expected)
+
     def test_registered_rtc_models_and_inactive_regen_loadouts(self):
         from run import plan
         with tempfile.TemporaryDirectory() as td:

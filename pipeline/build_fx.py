@@ -31,30 +31,40 @@ def prepare(manifest,cfg,base,bounded):
     from run import cs,dump,digest
     from utf import utf
     data=Path(cfg['game'])/'DATA';dest=base/'cache/ale';dest.mkdir(exist_ok=True)
-    defs={}
+    defs={};texture_files=set()
     for ship in manifest['ships']:
         for r in effect_requests(ship):
             d=resolve_effect(ship,r['nickname'])
-            if d:defs[str(first(d,'alchemy'))]=d
+            if d:
+                defs[str(first(d,'alchemy'))]=d
+                texture_files.update(str(v[0]) for v in values(d,'textures'))
     files=sorted(defs);resources=set(files)
-    for d in defs.values():resources.update(str(v[0]) for v in values(d,'textures'))
+    resources.update(texture_files)
     resources.add('fx/efx.txm')
     fingerprints={p:digest(data/p) for p in sorted(resources) if (data/p).exists()}
     stamp=dest/'inputs.json';template=(base/'reference/effects.csx').read_text()
-    signature={'inputs':fingerprints,'template':digest(base/'reference/effects.csx')}
+    signature={'inputs':fingerprints,'template':digest(base/'reference/effects.csx'),'named_float_literals':True,'texture_animations':1}
     if not stamp.exists() or json.loads(stamp.read_text())!=signature:
         begin=template.index(' using var stream=');body=template[begin:]
         header=template[template.index('using System;'):template.index('var root=')]
-        code='#r '+json.dumps((Path(cfg['sdk'])/'lib/System.Text.Json.dll').as_posix())+'\n'+header+'\nvar root='+cs(data)+';var output='+cs(dest)+';\nvar opts=new JsonSerializerOptions{IncludeFields=true,WriteIndented=true};opts.Converters.Add(new JsonStringEnumConverter());\nforeach(var p in new string[]{'+','.join(cs(p) for p in files)+'}){\n'+body
+        code='#r '+json.dumps((Path(cfg['sdk'])/'lib/System.Text.Json.dll').as_posix())+'\n'+header+'\nvar root='+cs(data)+';var output='+cs(dest)+';\nvar opts=new JsonSerializerOptions{IncludeFields=true,WriteIndented=true,NumberHandling=JsonNumberHandling.AllowNamedFloatingPointLiterals};opts.Converters.Add(new JsonStringEnumConverter());\nforeach(var p in new string[]{'+','.join(cs(p) for p in files)+'}){\n'+body
         script=base/'cache/effects.csx';script.write_text(code)
         bounded([str(Path(cfg['sdk'])/'lleditscript.exe'),str(script)],base/'cache/effects.log',cfg)
-        textures=base/'cache/textures';textures.mkdir(exist_ok=True)
+        import struct
+        textures=base/'cache/textures';textures.mkdir(exist_ok=True);animations={}
         for p in sorted(resources):
             if not p.lower().endswith('.txm') or not (data/p).exists():continue
-            for n in utf(data/p):
+            nodes=utf(data/p)
+            for n in nodes:
                 if n['size'] and n['path'].rsplit('/',1)[-1].lower() in ['mip0','mips']:
                     name=n['path'].split('/')[-2];raw=n['raw'];ext='.dds' if raw[:4]==b'DDS ' else '.tga'
                     (textures/(name+ext)).write_bytes(raw)
+                if n['size'] and n['path'].lower().endswith('/frame rects'):
+                    parent=n['path'].rsplit('/',1)[0];name=parent.rsplit('/',1)[-1]
+                    fields={x['path'].rsplit('/',1)[-1].lower():x['raw'] for x in nodes if x['size'] and x['path'].rsplit('/',1)[0]==parent}
+                    animations[name.lower()]={'name':name,'source':p,'fps':struct.unpack('<f',fields['fps'])[0],
+                                              'frames':list(struct.iter_unpack('<5f',n['raw']))}
+        dump(textures/'animations.json',animations)
         dump(stamp,signature)
     return fingerprints
 

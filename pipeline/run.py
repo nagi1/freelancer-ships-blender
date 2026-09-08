@@ -16,6 +16,14 @@ def v(s,k): return fl.values(s,k)
 def f(s,k): return fl.first(s,k)
 def low(s): return str(s or '').lower()
 
+def ship_group(ship):
+    nick=low(ship['nickname'])
+    if nick.startswith('rtc') or nick=='depot':return 'cinematic'
+    parts=low(f(ship['ship'],'DA_archetype')).replace('\\','/').split('/')
+    family=parts[1] if len(parts)>1 and parts[0]=='ships' else 'utility'
+    return {'border_world':'border_worlds','bounty_hunter':'bounty_hunters',
+            'corsair':'outcasts','pirate':'corsairs','nomad':'nomads'}.get(family,family)
+
 def plan(cfg, scope):
     game=Path(cfg['game']); fl.ROOT=game; data=game/'DATA'
     sections=[]; parsed={}
@@ -104,6 +112,7 @@ def plan(cfg, scope):
                     if cap:caps.append({'asset':asset(cap),'hardpoint':f(x,'dmg_hp'),'definition':x})
         pilot=resolve(f(s,'pilot_mesh'),'Simple') if f(s,'pilot_mesh') else None
         result.append({'nickname':nick,'asset':asset(s),'pilot_asset':asset(pilot) if pilot else None,'aliases':sorted(f(x,'nickname') for x in aliases),'ship':s,'loadout':load,'loadout_choices':sorted(set(f(x,'nickname') for x in choices)),'mounts':mounts,'damage':caps,'dependencies':dependencies})
+    for ship in result:ship['group']=ship_group(ship)
     return {'schema':1,'scope':scope,'game':str(game),'registered_files':registered,'ships':result,'assets':assets}
 
 def bounded(args, log, cfg):
@@ -207,7 +216,7 @@ def main():
     from build_fx import prepare
     fx_inputs=prepare(manifest,cfg,BASE,bounded)
     for ship in manifest['ships']:
-        nick=ship['nickname'];output=BASE/'ships'/args.scope/(nick+'.blend');output.parent.mkdir(parents=True,exist_ok=True)
+        nick=ship['nickname'];output=BASE/'ships'/ship['group']/(nick+'.blend');output.parent.mkdir(parents=True,exist_ok=True)
         report=BASE/'reports'/args.scope/(nick+'.json');report.parent.mkdir(parents=True,exist_ok=True)
         sig=hashlib.sha256(json.dumps({'ship':ship,'assets':manifest['assets'],'fx':fx_inputs,'scripts':{p.name:digest(p) for p in sorted((BASE/'pipeline').glob('*.py'))},'blender':digest(Path(cfg['blender']))},sort_keys=True).encode()).hexdigest()
         if not args.force and output.exists() and report.exists() and json.loads(report.read_text()).get('signature')==sig:

@@ -21,15 +21,22 @@ def image_named(name):
  im=bpy.data.images.get('FreelancerFX::'+name)
  if im:return im
  p=next((p for p in (W/'textures').iterdir() if p.stem.lower()==name.lower()),None)
+ if not p:
+  animations=json.loads((W/'textures/animations.json').read_text())
+  animation=animations.get(name.lower())
+  if animation:
+   index=int(animation['frames'][0][0]);p=next((p for p in (W/'textures').iterdir() if p.stem.lower()==(name+'_'+str(index)).lower()),None)
  if not p:raise ValueError('Missing original texture '+name)
  im=bpy.data.images.load(str(p),check_existing=False);im.name='FreelancerFX::'+name;im.pack();return im
 def driver(socket,prop,expr='v'):
  fc=socket.driver_add('default_value');d=fc.driver;d.type='SCRIPTED';v=d.variables.new();v.name='v';v.type='SINGLE_PROP';v.targets[0].id=ctrl;v.targets[0].data_path='["'+prop+'"]';d.expression=expr
-def material(name,texture,colors,alphas,control,flash=False):
+def material(name,texture,colors,alphas,control,flash=False,life=1):
  m=bpy.data.materials.new(name);m.use_nodes=True;m.surface_render_method='DITHERED';m.diffuse_color=(*colors[0],1)
  n=m.node_tree.nodes;l=m.node_tree.links;n.clear();out=n.new('ShaderNodeOutputMaterial');add=n.new('ShaderNodeAddShader');trans=n.new('ShaderNodeBsdfTransparent');em=n.new('ShaderNodeEmission');l.new(trans.outputs[0],add.inputs[0]);l.new(em.outputs[0],add.inputs[1]);l.new(add.outputs[0],out.inputs['Surface'])
  tex=n.new('ShaderNodeTexImage');tex.image=image_named(texture);tex.extension='CLIP'
  att=n.new('ShaderNodeAttribute');att.attribute_name='ale_age'
+ from texture_animation import configure_atlas
+ configure_atlas(m,tex,texture,att.outputs['Fac'],life,W/'textures/animations.json')
  ramp=n.new('ShaderNodeValToRGB');ar=n.new('ShaderNodeValToRGB')
  for node,vs in [(ramp,[(*c,1) for c in colors]),(ar,[(a,a,a,1) for a in alphas])]:
   cr=node.color_ramp;cr.interpolation='LINEAR';cr.elements.remove(cr.elements[1]);cr.elements[0].color=vs[0]
@@ -51,7 +58,13 @@ def uv_default(mesh):
 def val(d,k,default=0):
  v=d.get(k,default);return v[0] if isinstance(v,list) else v
 def curve(d,k,default):return d.get(k,[default]*33)
-def colors(d):return [(v['R'],v['G'],v['B']) for v in d.get('BasicApp_Color',[{'R':1,'G':1,'B':1}]*33)]
+def colors(d):
+ values=[tuple(float(v[k]) for k in ('R','G','B')) for v in d.get('BasicApp_Color',[{'R':1,'G':1,'B':1}]*33)]
+ # A zero-width ALE key interval can evaluate to NaN exactly at birth.
+ # Use the nearest finite sampled color, retaining all other source samples.
+ valid=[i for i,c in enumerate(values) if all(math.isfinite(x) for x in c)]
+ if not valid:raise ValueError('ALE color curve has no finite samples')
+ return [c if all(math.isfinite(x) for x in c) else values[min(valid,key=lambda j:abs(j-i))] for i,c in enumerate(values)]
 C=Matrix(((1,0,0),(0,0,-1),(0,1,0)))
 fxrecords=[]
 def make_effect(file,effectname,hp,col,control,flash=False,sample=2):
@@ -68,7 +81,7 @@ def make_effect(file,effectname,hp,col,control,flash=False,sample=2):
   tr=ed.get('Node_Transform',{});pos=tr.get('Translation',{'X':0,'Y':0,'Z':0});rot=tr.get('Rotation',{'W':1,'X':0,'Y':0,'Z':0})
   origin=C@Vector((pos['X'],pos['Y'],pos['Z']));direction=C@(Quaternion((rot['W'],rot['X'],rot['Y'],rot['Z']))@Vector((0,1,0)))
   label=f'{effectname}::{hp}::{an["Name"]}::{pair["Item1"]}'
-  mat=material(label,ad.get('BasicApp_TexName','planetflare'),colors(ad),curve(ad,'BasicApp_Alpha',1),control,flash)
+  mat=material(label,ad.get('BasicApp_TexName','planetflare'),colors(ad),curve(ad,'BasicApp_Alpha',1),control,flash,life)
   if an['Name']=='FLBeamAppearance':
    # World-space trail represented by a straight-flight preview at the configured speed.
    count=max(3,min(64,round(frequency*life)));width=curve(ad,'RectApp_Width',1);length=80*life
