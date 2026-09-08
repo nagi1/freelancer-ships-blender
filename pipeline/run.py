@@ -24,6 +24,9 @@ def plan(cfg, scope):
         sections.extend(parsed[str(p.relative_to(game))])
     config=fl.ini(game/'EXE/freelancer.ini')
     registered=[str(row[0]).replace('\\','/') for s in config if low(s['section'])=='data' for _,row in s['entries'] if row]
+    dependency_files={'data/'+str(row[0]).replace('\\','/').lower() for s in config if low(s['section'])=='data' for k,row in s['entries'] if low(k) in ('equipment','effects','fuses','explosions','ships') and row}
+    def dependency(entry):
+        return low(entry['file']).replace('\\','/') in dependency_files and low(entry['section']) not in ('ship','good','loadout','sound')
     # Source files registered by freelancer.ini take priority over mission-local data.
     sections.sort(key=lambda s:(str(s['file']).replace('\\','/')[5:].lower() not in [r.lower() for r in registered],low(s['file'])))
     index={}
@@ -84,7 +87,7 @@ def plan(cfg, scope):
                     if isinstance(value,str):
                         # Effect and VisEffect may deliberately share a nickname.
                         # Follow both records instead of stopping at the first one.
-                        queue.extend(ref for ref in index.get(low(value),[]) if low(ref['section']) not in ['good','loadout','ship','npcshiparch','sound'])
+                        queue.extend(ref for ref in index.get(low(value),[]) if dependency(ref))
         for row in v(load,'equip') if load else []:
             entry=resolve(row[0]);hp=str(row[1]) if len(row)>1 else None
             if not entry:raise ValueError('Unresolved equipment '+str(row[0]))
