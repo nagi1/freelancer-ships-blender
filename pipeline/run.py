@@ -140,14 +140,18 @@ def convert(manifest,cfg,force):
         if not force and dest.exists() and stamp.exists() and stamp.read_text()==signature:continue
         todo.append((a,dest,stamp,signature))
     if not todo:return
-    code=header+'\nvar data='+cs(Path(cfg['game'])/'DATA')+';\nvar map=new MaterialMap(); map.AddMap("EcEtOcOt","DcDtOcOt");map.AddMap("DcDtEcEt","DcDtEt");var fs=FileSystem.FromPath(data);\n'
-    for a,dest,_,_ in todo:
-        code+='\n{ var path='+cs(a['path'])+'; var destination='+cs(dest)+';var libs=new string[]{'+','.join(cs(x) for x in a['libraries'])+'};\n'+exporter+'\n}\n'
-    script=cache/'convert.csx';script.write_text(code,encoding='utf8')
-    bounded([str(tool),str(script)],cache/'convert.log',cfg)
-    for a,dest,stamp,signature in todo:
-        if not dest.exists():raise RuntimeError('Missing conversion '+a['path'])
-        stamp.write_text(signature)
+    # Small restartable batches keep memory and the worker timeout bounded.
+    for offset in range(0,len(todo),12):
+        batch=todo[offset:offset+12]
+        code=header+'\nvar data='+cs(Path(cfg['game'])/'DATA')+';\nvar map=new MaterialMap(); map.AddMap("EcEtOcOt","DcDtOcOt");map.AddMap("DcDtEcEt","DcDtEt");var fs=FileSystem.FromPath(data);\n'
+        for a,dest,stamp,signature in batch:
+            code+='\n{ var path='+cs(a['path'])+'; var destination='+cs(dest)+';var libs=new string[]{'+','.join(cs(x) for x in a['libraries'])+'};\n'+exporter+'\n}\n'
+            code+='File.WriteAllText('+cs(stamp)+','+cs(signature)+');\n'
+        script=cache/'convert.csx';script.write_text(code,encoding='utf8')
+        bounded([str(tool),str(script)],cache/'convert.log',cfg)
+        for a,dest,stamp,signature in batch:
+            if not dest.exists() or not stamp.exists():raise RuntimeError('Missing conversion '+a['path'])
+        print('Converted assets:',min(offset+12,len(todo)),'/',len(todo),flush=True)
 
 def main():
     ap=argparse.ArgumentParser();ap.add_argument('command',choices=['plan','build','verify']);ap.add_argument('--scope',choices=['liberty','all'],default='liberty');ap.add_argument('--force',action='store_true');args=ap.parse_args()
