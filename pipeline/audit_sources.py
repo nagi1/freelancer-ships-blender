@@ -25,7 +25,13 @@ def audit(cfg):
         rel = str(path.relative_to(data)).replace('\\', '/').lower()
         utility.append({'model': rel, 'ship_archetypes': [f(s, 'nickname') for s in ships
                         if low(f(s, 'DA_archetype')).replace('\\', '/') == rel]})
-    result = {'game': str(root), 'sources': sources, 'utility': utility}
+    loadouts = [{f(s,'nickname'):s['entries'] for s in ini.ini(data/'SHIPS'/name)}
+                for name in ('loadouts.ini','loadouts_regen.ini')]
+    active, regen = loadouts
+    regen_changes = [{'nickname':n, 'added':[e for e in regen.get(n,[]) if e not in active[n]],
+                      'removed':[e for e in active[n] if e not in regen.get(n,[])]}
+                     for n in sorted(active) if active[n] != regen.get(n)]
+    result = {'game': str(root), 'sources': sources, 'utility': utility, 'regen_changes':regen_changes}
     dump(BASE/'reports/source-audit.json', result)
     print(json.dumps({'sources': {k: {x: v[x] if x != 'models' else len(v[x]) for x in ('registered','records','models','inheritance')} for k,v in sources.items()},
                       'utility_models': len(utility), 'utility_registered_models': sum(bool(x['ship_archetypes']) for x in utility)}, indent=2))

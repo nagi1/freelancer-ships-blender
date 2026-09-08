@@ -13,6 +13,11 @@ with the configured Blender Python to regenerate `reports/source-audit.json`.
 | shiparch.ini | 69 | Gameplay archetypes referencing 61 distinct models |
 | rtc_shiparch.ini | 46 | Registered cinematic archetypes; shared hull aliases merge with gameplay hulls |
 
+Comparing `loadouts_regen.ini` with the active `loadouts.ini` finds 223 changed
+records, each adding one shield equipment entry. The detailed added/removed
+rows are retained in the audit JSON. This alternate gameplay configuration
+does not add new hull geometry and is not merged into the active loadouts.
+
 `UTILITY` contains 34 CMP/3DB files, of which 12 are referenced by ship
 archetypes. Other files include damage caps, shield/escape-pod parts, train
 composition variants, mining debris and a mining variant. Referenced damage
