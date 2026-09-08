@@ -56,12 +56,19 @@ for o in moving:
 assert not bpy.context.view_layer.layer_collection.children['Freelancer_Ship'].children['FX'].exclude
 particles=[o for o in s.objects if any(m.type=='NODES' for m in o.modifiers)]
 if particles:
-    o=particles[0];positions=[]
+    o=particles[0];positions=[];ages=[]
     for frame in [1,2]:
         s.frame_set(frame);ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get())
         assert len(ev.data.vertices)>0,('Missing evaluated particles',o.name)
         positions.append(ev.data.vertices[0].co.copy())
-    assert (positions[1]-positions[0]).length>1e-7,('Static particle system',o.name)
+        attribute=ev.data.attributes.get('ale_age')
+        assert attribute and len(attribute.data),('Missing particle age',o.name)
+        ages.append(attribute.data[0].value)
+    assert abs(ages[1]-ages[0])>1e-7,('Frozen particle clock',o.name)
+    # Source Rheinland glow emitters have zero pressure and a fixed-size card.
+    # Their lifetime/shader still advances; movement is required for moving emitters.
+    if abs(o.get('emitter_pressure',0))>1e-7:
+        assert (positions[1]-positions[0]).length>1e-7,('Static moving emitter',o.name)
 if r['nickname']=='li_elite':
     fixture=json.loads((Path(__file__).resolve().parents[1]/'tests/defender_reference_motion.json').read_text())
     for name,poses in fixture.items():
