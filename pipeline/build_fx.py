@@ -10,6 +10,10 @@ def effect_requests(ship):
         keys=['flame_effect','trail_effect'] if kind=='engine' else ['particles'] if kind in ['thruster','attachedfx'] else ['flash_particle_name','effect']
         for key in keys:
             if first(d,key):requests.append({'nickname':first(d,key),'mount_index':i,'kind':kind,'key':key})
+        ammo=next((a for a in ship.get('dependencies',[]) if a['section'].lower()=='munition' and first(a,'nickname')==first(d,'projectile_archetype')),None)
+        # Explicitly supported projectile preview; other ammunition remains metadata.
+        if ammo and first(ammo,'const_effect')=='li_cruiser_maingun':
+            requests.append({'nickname':first(ammo,'const_effect'),'mount_index':i,'kind':'projectile','key':'const_effect','lifetime':float(first(ammo,'lifetime')),'speed':float(first(d,'muzzle_velocity')),'refire':float(first(d,'refire_delay'))})
     return requests
 
 def resolve_effect(ship,nick):
@@ -99,9 +103,20 @@ def build_fx(job,cols,hardpoints,equipment):
         refs={x['Index']:x for x in effect['Fx']};nodes={x['CRC']:x for x in data['Nodes']}
         if not hps:report['unsupported'].append('Effect lacks mount '+str(req['nickname']))
         for hp in hps:
+            if req['kind']=='projectile':
+                from projectile_preview import add_projectile_preview
+                report['created'].extend(add_projectile_preview(runtime,file,effect['Name'],hp,cols['FX'],req))
+                continue
             control='engine_on' if req['kind']=='engine' else 'thruster_on' if req['kind']=='thruster' else 'contrails_on' if req['kind']=='attachedfx' else 'weapon_effects'
             before=len(runtime.fxrecords)
             runtime.make_effect(file,effect['Name'],hp.name,cols['FX'],control,req['key']=='flash_particle_name',5 if req['kind']=='thruster' else 2)
+            if req['key']=='flash_particle_name':
+                delay=max(.001,float(first(mount['definition'],'refire_delay') or .12)*24)
+                for name in runtime.fxrecords[before:]:
+                    material=bpy.data.materials.get(name)
+                    if material:
+                        gain=next(n for n in material.node_tree.nodes if n.type=='VALUE')
+                        gain.outputs[0].driver_add('default_value').driver.expression=f'v*(1 if ((72<=frame<120) or (168<=frame<216)) and (((frame-72) if frame<120 else (frame-168))%{delay:.9g}<min(1.1,{delay:.9g})) else 0)'
             report['created'].extend(runtime.fxrecords[before:])
     from navigation_lights import build_lights
     report['lights']=build_lights(job,hardpoints)

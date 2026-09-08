@@ -73,6 +73,12 @@ Press **Space** over the viewport to play frames 1–240 at 24 fps:
 
 Door duration comes from each asset; capital ships take longer than the Defender. Only available native clips and equipment-requested recoil are scheduled.
 
+The Liberty cruiser's forward main gun also has its original `li_cruiser_maingun`
+ring/projectile effect, fired from `HpFire01` at 500 m/s every 0.5 seconds during
+the two bursts. Its 2-second projectile lifetime extends the cruiser timeline to
+frame 252. This is a bounded straight-flight ALE preview, without collision or
+damage simulation; other ammunition is not yet given projectile previews.
+
 ### Headlight controls
 
 1. Find **Ship_Controls** in the Outliner and select it.
@@ -158,6 +164,7 @@ Game INIs and native assets
 | `pipeline/fx_runtime.py` | Reference-derived Geometry Nodes particle animation |
 | `pipeline/animation_preview.py` | Two-burst playback, EEVEE lighting and camera |
 | `pipeline/navigation_lights.py` | Bulbs/glows, inherited properties and headlight controls |
+| `pipeline/projectile_preview.py` | Cruiser main-gun ring effect and ammunition-timed straight flight |
 | `pipeline/verify_blend.py` | Saved-file, motion and reference-pose checks |
 | `pipeline/inspect_animation.py` | Local Defender/reference comparison utility |
 

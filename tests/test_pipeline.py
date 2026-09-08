@@ -22,5 +22,10 @@ class PipelineTests(unittest.TestCase):
     def test_native_flash_parameter_name(self):
         ship={'mounts':[{'definition':{'section':'Gun','entries':[['flash_particle_name',['flash']]]}}]}
         self.assertEqual(effect_requests(ship)[0]['nickname'],'flash')
+    def test_cruiser_main_gun_projectile_reference(self):
+        ship={'mounts':[{'definition':{'section':'Gun','entries':[['projectile_archetype',['main_ammo']],['muzzle_velocity',[500]],['refire_delay',[.5]]]}}],
+              'dependencies':[{'section':'Munition','entries':[['nickname',['main_ammo']],['const_effect',['li_cruiser_maingun']],['lifetime',[2]]]}]}
+        request=effect_requests(ship)[0]
+        self.assertEqual((request['nickname'],request['speed'],request['refire'],request['lifetime']),('li_cruiser_maingun',500,.5,2))
 
 if __name__=='__main__':unittest.main()

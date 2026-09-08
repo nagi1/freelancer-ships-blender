@@ -72,4 +72,12 @@ if r['nickname']=='li_elite':
         for frame,expected in poses.items():
             s.frame_set(int(frame));actual=[list(o.location),list(o.rotation_quaternion)]
             assert max(abs(a-b) for av,bv in zip(actual,expected) for a,b in zip(av,bv))<1e-4,('Reference animation mismatch',name,frame)
+if r['nickname']=='li_cruiser':
+    projectiles=[o for o in s.objects if o.name.startswith('MainGun_Projectile_')]
+    assert len(projectiles)==8,'Missing cruiser main-gun projectile preview'
+    assert sorted(o['projectile_spawn'] for o in projectiles)==[72,84,96,108,168,180,192,204]
+    for o in projectiles:
+        assert o['projectile_end']-o['projectile_spawn']==48
+        s.frame_set(86);a=comp(o).translation.copy();s.frame_set(87);b=comp(o).translation.copy()
+        assert abs((b-a).length-500/24)<1e-3,'Incorrect cruiser projectile speed'
 print('VERIFIED',r['nickname'],len(s.objects),'objects',len(r['mounted']),'mounts')

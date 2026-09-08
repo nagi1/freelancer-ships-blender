@@ -6,6 +6,8 @@ JOB=json.loads(Path(sys.argv[sys.argv.index('--')+1]).read_text())
 BASE=Path(JOB['base']);sys.path.insert(0,str(BASE/'pipeline'))
 from ini import first, values
 s=bpy.context.scene
+for name in ['READ_ME','Freelancer_manifest.json','Build_report.json','Headlight_controls']:
+    if bpy.data.texts.get(name):bpy.data.texts.remove(bpy.data.texts[name])
 for o in list(bpy.data.objects):bpy.data.objects.remove(o,do_unlink=True)
 for c in list(bpy.data.collections):bpy.data.collections.remove(c)
 master=bpy.data.collections.new('Freelancer_Ship');s.collection.children.link(master)

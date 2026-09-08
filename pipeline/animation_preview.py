@@ -61,7 +61,7 @@ def configure_preview():
     for category in ['FX','Contrails','Lights']:
         if layer and layer.children.get(category):layer.children[category].exclude=False
     scene.render.engine='BLENDER_EEVEE';scene.eevee.use_raytracing=False;scene.eevee.taa_samples=8
-    scene.render.fps=24;scene.frame_start=1;scene.frame_end=240
+    scene.render.fps=24;scene.frame_start=1;scene.frame_end=max(240,int(max((o.get('projectile_end',0) for o in scene.objects),default=0)))
     for name,frame in [('Second firing burst',168),('Cease fire',216)]:
         if name not in scene.timeline_markers:scene.timeline_markers.new(name,frame=frame)
     for screen in bpy.data.screens:
