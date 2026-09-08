@@ -135,6 +135,28 @@ def convert(manifest,cfg,force):
     start=exporter.index(' foreach(var lib in new[]{');end=exporter.index('r.LoadResourceFile(lib);',start)+len('r.LoadResourceFile(lib);')
     exporter=exporter[:start]+' foreach(var lib in libs)r.LoadResourceFile(lib);'+exporter[end:]
     exporter=exporter.replace('Path.Combine(output,Path.GetFileNameWithoutExtension(path)+".glb")','destination')
+    # Some legitimate equipment files (Nomad thruster) contain only hardpoints.
+    at=exporter.index(' var result=')
+    empty='''
+ if(drawable is ModelFile emptyModel && emptyModel.Levels.Length == 0) {
+   var root = new ModelNode {Name="Root"};
+   foreach(var hp in emptyModel.Hardpoints) {
+     var child = new ModelNode {Name=hp.Name, Transform=hp.Transform.Matrix()};
+     child.Properties["hardpoint"] = true;
+     child.Properties["hptype"] = hp is RevoluteHardpointDefinition ? "rev" : "fix";
+     if(hp is RevoluteHardpointDefinition rev) {
+       child.Properties["min"] = MathHelper.RadiansToDegrees(rev.Min);
+       child.Properties["max"] = MathHelper.RadiansToDegrees(rev.Max);
+       child.Properties["axis"] = rev.Axis;
+     }
+     root.Children.Add(child);
+   }
+   var model = new SimpleMesh.Model {Roots=new[]{root}, Geometries=Array.Empty<Geometry>(), Materials=new Dictionary<string,SimpleMesh.Material>()};
+   using var file=File.Create(destination);model.SaveTo(file,ModelSaveFormat.GLB);
+   Console.WriteLine("Converted hardpoint-only "+path);
+ } else {
+'''
+    exporter=exporter[:at]+empty+exporter[at:]+'\n}\n'
     sdk=Path(cfg['sdk']);tool=sdk/'lleditscript.exe'
     todo=[]
     for key,a in sorted(manifest['assets'].items()):
