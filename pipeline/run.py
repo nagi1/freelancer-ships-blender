@@ -1,5 +1,6 @@
 """Offline orchestration: deterministic manifests, content cache, bounded workers."""
 import argparse, hashlib, json, os, subprocess, sys
+from collections import deque
 from pathlib import Path
 import ini as fl
 
@@ -7,7 +8,9 @@ BASE = Path(__file__).resolve().parents[1]
 def dump(path, data):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2, sort_keys=True), encoding='utf8')
-def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def digest(path):
+    with path.open('rb') as source:
+        return hashlib.file_digest(source, 'sha256').hexdigest()
 def cs(s): return '@"' + str(s).replace('"', '""') + '"'
 def v(s,k): return fl.values(s,k)
 def f(s,k): return fl.first(s,k)
@@ -15,9 +18,10 @@ def low(s): return str(s or '').lower()
 
 def plan(cfg, scope):
     game=Path(cfg['game']); fl.ROOT=game; data=game/'DATA'
-    sections=[]
+    sections=[]; parsed={}
     for p in sorted(data.rglob('*.ini'),key=lambda p:str(p).lower()):
-        sections.extend(fl.ini(p))
+        parsed[str(p.relative_to(game))]=fl.ini(p)
+        sections.extend(parsed[str(p.relative_to(game))])
     config=fl.ini(game/'EXE/freelancer.ini')
     registered=[str(row[0]).replace('\\','/') for s in config if low(s['section'])=='data' for _,row in s['entries'] if row]
     # Source files registered by freelancer.ini take priority over mission-local data.
@@ -31,27 +35,33 @@ def plan(cfg, scope):
         if kind:candidates=[s for s in candidates if low(s['section'])==low(kind)]
         else:candidates=[s for s in candidates if low(s['section']) not in ['good','loadout','ship','npcshiparch','sound']]
         return candidates[0] if candidates else None
-    ships=[s for s in sections if low(s['section'])=='ship' and low(s['file']).replace('\\','/')=='data/ships/shiparch.ini']
+    ship_files={'data/'+str(row[0]).replace('\\','/').lower() for s in config if low(s['section'])=='data' for k,row in s['entries'] if low(k)=='ships' and row}
+    loadout_files={'data/'+str(row[0]).replace('\\','/').lower() for s in config if low(s['section'])=='data' for k,row in s['entries'] if low(k)=='loadouts' and row}
+    ships=[s for s in sections if low(s['section'])=='ship' and low(s['file']).replace('\\','/') in ship_files]
     ships=[s for s in ships if f(s,'DA_archetype') and (scope=='all' or 'ships\\liberty\\' in low(f(s,'DA_archetype')))]
     groups={}
     for s in ships:groups.setdefault(low(f(s,'DA_archetype')),[]).append(s)
-    assets={}; result=[]
+    assets={}; result=[]; hashes={}
     def asset(s):
         path=f(s,'DA_archetype')
         if not path:return None
         libs=[str(x[0]) for x in v(s,'material_library')]+['fx\\envmapbasic.mat']
         libs=sorted(set(x for x in libs if (data/x).exists()),key=str.lower)
         key=hashlib.sha256(json.dumps([low(path),libs]).encode()).hexdigest()[:16]
+        if key in assets:return key
         files=[data/path,*[data/x for x in libs]]
         sur=(data/path).with_suffix('.sur')
         if sur.exists():files.append(sur)
         for p in files:
             if not p.exists():raise FileNotFoundError(p)
-        assets[key]={'id':key,'path':path,'libraries':libs,'sha256':{str(p.relative_to(data)):digest(p) for p in files}}
+        for p in files:
+            if p not in hashes:hashes[p]=digest(p)
+        assets[key]={'id':key,'path':path,'libraries':libs,'sha256':{str(p.relative_to(data)):hashes[p] for p in files}}
         return key
     for model,aliases in sorted(groups.items()):
+        aliases.sort(key=lambda s:(low(s['file']).replace('\\','/')!='data/ships/shiparch.ini',low(f(s,'nickname'))))
         s=next((s for s in aliases if low(f(s,'nickname'))==Path(model.replace('\\','/')).stem),aliases[0]);nick=f(s,'nickname')
-        choices=[x for x in sections if low(x['section'])=='loadout' and low(f(x,'archetype'))==low(nick)]
+        choices=[x for x in sections if low(x['section'])=='loadout' and low(f(x,'archetype'))==low(nick) and (low(x['file']).replace('\\','/') in loadout_files or 'missions' in low(x['file']))]
         selected=cfg['liberty_loadouts'].get(nick)
         if selected:
             load=next((x for x in choices if low(f(x,'nickname'))==low(selected)),None)
@@ -59,13 +69,13 @@ def plan(cfg, scope):
         else:
             choices.sort(key=lambda x:(not low(f(x,'nickname')).endswith('loadout01'),low(f(x,'nickname')),low(x['file'])))
             load=choices[0] if choices else None
-        mounts=[];dependencies=[];seen=set();queue=[s]+([load] if load else [])
+        mounts=[];dependencies=[];seen=set();queue=deque([s]+([load] if load else []))
         while queue:
-            entry=queue.pop(0);key=(entry['file'],entry['section'],str(entry['entries']))
+            entry=queue.popleft();key=id(entry)
             if key in seen:continue
             seen.add(key);dependencies.append(entry)
             if low(entry['section'])=='fuse':
-                raw=fl.ini(game/entry['file']);at=next(i for i,x in enumerate(raw) if x['entries']==entry['entries'] and x['section']==entry['section'])
+                raw=parsed[entry['file']];at=next(i for i,x in enumerate(raw) if x is entry)
                 for x in raw[at+1:]:
                     if low(x['section'])=='fuse':break
                     queue.append(x)
