@@ -23,9 +23,7 @@ ships/elet.blend and is never overwritten by the batch pipeline.
 
 Budget: one worker, at most two logical CPUs via Windows process affinity,
 below-normal priority, two Blender threads, per-process timeout. No rendering,
-GPU conversion, texture upscaling, or simulation baking. Files open in solid
-texture-color mode; switch to material preview when needed. FX are optional and
-excluded from the view layer by default; this avoids expensive transparent overdraw.
+GPU conversion, texture upscaling, or simulation baking. Files open in material preview with bounded animated FX visible. Hide the FX collection or switch to Solid for the cheapest editing mode.
 No promise of a particular Task Manager percentage: other programs and GPU clocks
 affect that number.
 
@@ -53,3 +51,4 @@ passed. See EXPERIMENT.md for the measured inventory and scope limits.
 
 Future full-game run: `./run.ps1 plan -Scope all`, review the selected loadouts,
 then `./run.ps1 build -Scope all`. Only Liberty is built for this experiment.
+

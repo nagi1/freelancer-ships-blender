@@ -32,7 +32,30 @@ for o in moving:
         assert distance(samples[73][o.name],samples[169][o.name])<1e-4,('Second burst mismatch',o.name)
         assert distance(samples[1][o.name],samples[217][o.name])<1e-4,('Rest pose not restored',o.name)
     else:
-        assert distance(samples[1][o.name],samples[36][o.name])>1e-5,('Door does not open',o.name)
-        assert distance(samples[1][o.name],samples[60][o.name])<1e-4,('Door does not close',o.name)
+        strips=[st for t in o.animation_data.nla_tracks for st in t.strips]
+        opened=next(st for st in strips if not st.use_reverse and st.frame_start==24)
+        closed=next(st for st in strips if st.use_reverse)
+        s.frame_set(int(opened.frame_end))
+        assert distance(samples[1][o.name],o.matrix_basis)>1e-5,('Door does not open',o.name)
+        s.frame_set(int(closed.frame_end)+1)
+        assert distance(samples[1][o.name],o.matrix_basis)<1e-4,('Door does not close',o.name)
 assert not bpy.context.view_layer.layer_collection.children['Freelancer_Ship'].children['FX'].exclude
+particles=[o for o in s.objects if any(m.type=='NODES' for m in o.modifiers)]
+if particles:
+    o=particles[0];positions=[]
+    for frame in [1,2]:
+        s.frame_set(frame);ev=o.evaluated_get(bpy.context.evaluated_depsgraph_get())
+        assert len(ev.data.vertices)>0,('Missing evaluated particles',o.name)
+        positions.append(ev.data.vertices[0].co.copy())
+    assert (positions[1]-positions[0]).length>1e-7,('Static particle system',o.name)
+if r['nickname']=='li_elite':
+    fixture=json.loads((Path(__file__).resolve().parents[1]/'tests/defender_reference_motion.json').read_text())
+    for name,poses in fixture.items():
+        if name.startswith('Gun_'):
+            hp=name.split('::')[0][4:];component=name.split('::')[1]
+            o=next(o for o in s.objects if o.name.startswith(hp+'_') and o.name.endswith('::'+component))
+        else:o=bpy.data.objects[name]
+        for frame,expected in poses.items():
+            s.frame_set(int(frame));actual=[list(o.location),list(o.rotation_quaternion)]
+            assert max(abs(a-b) for av,bv in zip(actual,expected) for a,b in zip(av,bv))<1e-4,('Reference animation mismatch',name,frame)
 print('VERIFIED',r['nickname'],len(s.objects),'objects',len(r['mounted']),'mounts')

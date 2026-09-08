@@ -1,5 +1,20 @@
 # Liberty experiment — 2026-09-09
 
+## Animation correction
+
+The first batch omitted the second firing burst and hid animated effects. The
+preview now shows both bursts (72–120 and 168–216), with the reference ALE
+Geometry Nodes implementation retaining lifetime size/color/alpha curves at an
+eight-particle budget. Thrusters use SParam 1; engines use .85. Material Preview
+and FX are enabled when files open. Hide FX or use Solid for minimum viewport cost.
+
+Validation now checks actual motion and return-to-rest poses, using each ship's
+native door duration (capital ship doors take longer). It also checks evaluated
+particle movement. The Defender's sampled poses are compared against the tracked
+fixture extracted from ships/elet.blend. All six files passed these checks.
+The original inventory and initial preview limitations below describe the first
+build; the animation correction above supersedes the static-card/hidden-FX defaults.
+
 All six files generated, reopened and validated. An unchanged second invocation
 reported all six cached; no converter or Blender worker was needed for that run.
 Three regression tests pass (BINI/repeated entries, shared Effect/VisEffect names,

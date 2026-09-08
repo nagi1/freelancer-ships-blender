@@ -96,7 +96,7 @@ for o in sorted(bpy.data.objects,key=lambda o:o.name):
 
 # All provenance stays inside the blend, not dependent on the extraction directory.
 text=bpy.data.texts.new('Freelancer_manifest.json');text.write(json.dumps(ship,indent=2,sort_keys=True))
-text=bpy.data.texts.new('READ_ME');text.write('Native Freelancer model and explicitly selected loadout.\nPlay 1–240: native baydoor/recoil clips where present. Other native actions retained with fake users.\nFX, collision, LODs and damage are excluded by default for inexpensive editing. Enable FX collection to inspect approximations.\nExact source references and unsupported items are in Freelancer_manifest.json and Build_report.json.\nNo Cycles, simulations or background renders are required.\n')
+text=bpy.data.texts.new('READ_ME');text.write('Native Freelancer model and explicitly selected loadout.\nPlay 1–240: native baydoor/recoil clips where present. Other native actions retained with fake users.\nAnimated FX are visible in material preview; collision, LODs and damage remain excluded. Hide the FX collection for the cheapest editing mode.\nExact source references and unsupported items are in Freelancer_manifest.json and Build_report.json.\nNo Cycles, simulations or background renders are required.\n')
 s.render.engine='BLENDER_EEVEE';s.render.threads_mode='FIXED';s.render.threads=JOB['threads'];s.eevee.taa_samples=8;s.eevee.use_raytracing=False
 s.render.fps=24;s.frame_start=1;s.frame_end=240;s.sync_mode='FRAME_DROP';s.frame_set(1)
 for frame,label in [(1,'Idle'),(24,'Native door open'),(72,'Native weapon firing'),(121,'Idle')]:s.timeline_markers.new(label,frame=frame)
@@ -128,3 +128,4 @@ text=bpy.data.texts.new('Build_report.json');text.write(json.dumps(report,indent
 if errors:raise RuntimeError(json.dumps(errors))
 bpy.ops.wm.save_as_mainfile(filepath=JOB['output'],check_existing=False)
 Path(JOB['report']).write_text(json.dumps(report,indent=2,sort_keys=True))
+
