@@ -1,5 +1,14 @@
 # Freelancer to Blender
 
+## Freelancer Liberty Elite Ship Blender Demo
+
+<p align="center">
+  <a href="docs/media/freelancer-liberty-elite-ship-blender-demo.mp4">
+    <img src="docs/media/freelancer-liberty-elite-ship-blender-demo.png" alt="Freelancer Liberty Elite ship shown in Blender" width="720">
+  </a><br>
+  <a href="docs/media/freelancer-liberty-elite-ship-blender-demo.mp4">Watch the Freelancer Liberty Elite Ship Blender demo video</a>
+</p>
+
 A local, deterministic pipeline that builds self-contained Blender ships from original Freelancer assets: hulls, mounted equipment, packed textures, native animations, animated effects and working light controls.
 
 **No AI, API keys, network calls or token usage at runtime.** Blender MCP is useful for development but is not required to build or use the files.
