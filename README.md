@@ -38,6 +38,18 @@ Inputs and tool/script hashes control caching; unchanged builds skip work. JSON
 manifests/validation are stable and sorted. Blender files are semantically
 deterministic, not guaranteed byte-identical (Blender stores internal IDs).
 Game assets and generated binaries are ignored by Git; code and config are tracked.
+The hand-assembled `ships/elet.blend` is explicitly tracked as the reference baseline.
+
+Validation reopens each saved file in a bounded background Blender process and
+checks packed images, full attachment matrices, persisted native actions and
+lightweight viewport settings. Regression tests:
+
+```powershell
+& 'C:/Program Files/Blender Foundation/Blender 5.2/5.2/python/bin/python.exe' tests/test_pipeline.py
+```
+
+The initial six-file build, saved-file validation and unchanged-build cache test
+passed. See EXPERIMENT.md for the measured inventory and scope limits.
 
 Future full-game run: `./run.ps1 plan -Scope all`, review the selected loadouts,
 then `./run.ps1 build -Scope all`. Only Liberty is built for this experiment.
