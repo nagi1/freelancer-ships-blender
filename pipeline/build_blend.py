@@ -47,6 +47,10 @@ def import_asset(key,prefix,category,hp=None,connect_required=True):
 ship=JOB['ship'];root,shipobjects=import_asset(ship['asset'],'','Ship_Main')
 root['Freelancer_ship']=ship['nickname'];root['Freelancer_loadout']=first(ship['loadout'],'nickname') if ship['loadout'] else ''
 hardpoints={hpname(o).lower():o for o in shipobjects if o.get('hardpoint')}
+if ship.get('pilot_asset'):
+    hp=hardpoints.get('hppilot')
+    if hp:import_asset(ship['pilot_asset'],'Pilot','Ship_Main',hp)
+    else:warnings.append('Pilot referenced without HpPilot')
 equipment=[]
 for i,m in enumerate(ship['mounts']):
     hp=hardpoints.get(str(m['hardpoint']).lower());kind=m['definition']['section'].lower()

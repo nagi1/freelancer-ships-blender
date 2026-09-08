@@ -24,7 +24,8 @@ def plan(cfg, scope):
     sections.sort(key=lambda s:(str(s['file']).replace('\\','/')[5:].lower() not in [r.lower() for r in registered],low(s['file'])))
     index={}
     for s in sections:
-        if f(s,'nickname'): index.setdefault(low(f(s,'nickname')),[]).append(s)
+        name=f(s,'nickname') or (f(s,'name') if low(s['section'])=='fuse' else None)
+        if name:index.setdefault(low(name),[]).append(s)
     def resolve(n,kind=None):
         candidates=index.get(low(n),[])
         if kind:candidates=[s for s in candidates if low(s['section'])==low(kind)]
@@ -63,11 +64,17 @@ def plan(cfg, scope):
             entry=queue.pop(0);key=(entry['file'],entry['section'],str(entry['entries']))
             if key in seen:continue
             seen.add(key);dependencies.append(entry)
+            if low(entry['section'])=='fuse':
+                raw=fl.ini(game/entry['file']);at=next(i for i,x in enumerate(raw) if x['entries']==entry['entries'] and x['section']==entry['section'])
+                for x in raw[at+1:]:
+                    if low(x['section'])=='fuse':break
+                    queue.append(x)
             for k,vals in entry['entries']:
                 for value in vals:
                     if isinstance(value,str):
-                        ref=resolve(value)
-                        if ref:queue.append(ref)
+                        # Effect and VisEffect may deliberately share a nickname.
+                        # Follow both records instead of stopping at the first one.
+                        queue.extend(ref for ref in index.get(low(value),[]) if low(ref['section']) not in ['good','loadout','ship','npcshiparch','sound'])
         for row in v(load,'equip') if load else []:
             entry=resolve(row[0]);hp=str(row[1]) if len(row)>1 else None
             if not entry:raise ValueError('Unresolved equipment '+str(row[0]))
@@ -82,7 +89,8 @@ def plan(cfg, scope):
                 if f(x,'dmg_obj'):
                     cap=resolve(f(x,'dmg_obj'),'Simple')
                     if cap:caps.append({'asset':asset(cap),'hardpoint':f(x,'dmg_hp'),'definition':x})
-        result.append({'nickname':nick,'asset':asset(s),'aliases':sorted(f(x,'nickname') for x in aliases),'ship':s,'loadout':load,'loadout_choices':sorted(set(f(x,'nickname') for x in choices)),'mounts':mounts,'damage':caps,'dependencies':dependencies})
+        pilot=resolve(f(s,'pilot_mesh'),'Simple') if f(s,'pilot_mesh') else None
+        result.append({'nickname':nick,'asset':asset(s),'pilot_asset':asset(pilot) if pilot else None,'aliases':sorted(f(x,'nickname') for x in aliases),'ship':s,'loadout':load,'loadout_choices':sorted(set(f(x,'nickname') for x in choices)),'mounts':mounts,'damage':caps,'dependencies':dependencies})
     return {'schema':1,'scope':scope,'game':str(game),'registered_files':registered,'ships':result,'assets':assets}
 
 def bounded(args, log, cfg):
@@ -132,13 +140,15 @@ def convert(manifest,cfg,force):
         stamp.write_text(signature)
 
 def main():
-    ap=argparse.ArgumentParser();ap.add_argument('command',choices=['plan','build','verify']);ap.add_argument('--scope',default='liberty');ap.add_argument('--force',action='store_true');args=ap.parse_args()
+    ap=argparse.ArgumentParser();ap.add_argument('command',choices=['plan','build','verify']);ap.add_argument('--scope',choices=['liberty','all'],default='liberty');ap.add_argument('--force',action='store_true');args=ap.parse_args()
     cfg=json.loads((BASE/'config.json').read_text());cfg['threads']=max(1,min(2,int(cfg['threads'])))
     if args.command=='verify':
         reports=sorted((BASE/'reports'/args.scope).glob('*.json'))
         if not reports:raise RuntimeError('No build reports')
         for p in reports:
-            r=json.loads(p.read_text());assert r['valid'],r;assert Path(r['output']).exists();print(p.stem,'PASS')
+            r=json.loads(p.read_text());assert r['valid'],r;assert Path(r['output']).exists()
+            bounded([cfg['blender'],'--background',r['output'],'--threads',str(cfg['threads']),'--python-exit-code','1','--python',str(BASE/'pipeline/verify_blend.py')],BASE/'cache'/('verify-'+p.stem+'.log'),cfg)
+            print(p.stem,'PASS (reopened from disk)',flush=True)
         return
     manifest=plan(cfg,args.scope);dump(BASE/'reports'/('manifest-'+args.scope+'.json'),manifest)
     print('Ships:',', '.join(s['nickname'] for s in manifest['ships']),'| Unique assets:',len(manifest['assets']),flush=True)

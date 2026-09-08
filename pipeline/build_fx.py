@@ -7,7 +7,7 @@ def effect_requests(ship):
     requests=[]
     for i,m in enumerate(ship['mounts']):
         d=m['definition'];kind=d['section'].lower()
-        keys=['flame_effect','trail_effect'] if kind=='engine' else ['particles'] if kind=='thruster' else ['flash_particle','effect']
+        keys=['flame_effect','trail_effect'] if kind=='engine' else ['particles'] if kind in ['thruster','attachedfx'] else ['flash_particle_name','effect']
         for key in keys:
             if first(d,key):requests.append({'nickname':first(d,key),'mount_index':i,'kind':kind,'key':key})
     return requests
@@ -16,7 +16,8 @@ def resolve_effect(ship,nick):
     seen=set()
     while str(nick).lower() not in seen:
         seen.add(str(nick).lower())
-        d=next((d for d in ship['dependencies'] if str(first(d,'nickname')).lower()==str(nick).lower() and d['section'].lower() in ['effect','viseffect']),None)
+        matches=[d for d in ship['dependencies'] if str(first(d,'nickname')).lower()==str(nick).lower() and d['section'].lower() in ['effect','viseffect']]
+        d=next((d for d in matches if first(d,'alchemy')),matches[0] if matches else None)
         if not d:return None
         if first(d,'alchemy'):return d
         nick=first(d,'vis_effect')
@@ -40,7 +41,7 @@ def prepare(manifest,cfg,base,bounded):
     if not stamp.exists() or json.loads(stamp.read_text())!=signature:
         begin=template.index(' using var stream=');body=template[begin:]
         header=template[template.index('using System;'):template.index('var root=')]
-        code='#r '+cs(Path(cfg['sdk'])/'lib/System.Text.Json.dll')+'\n'+header+'\nvar root='+cs(data)+';var output='+cs(dest)+';\nvar opts=new JsonSerializerOptions{IncludeFields=true,WriteIndented=true};opts.Converters.Add(new JsonStringEnumConverter());\nforeach(var p in new string[]{'+','.join(cs(p) for p in files)+'}){\n'+body
+        code='#r '+json.dumps((Path(cfg['sdk'])/'lib/System.Text.Json.dll').as_posix())+'\n'+header+'\nvar root='+cs(data)+';var output='+cs(dest)+';\nvar opts=new JsonSerializerOptions{IncludeFields=true,WriteIndented=true};opts.Converters.Add(new JsonStringEnumConverter());\nforeach(var p in new string[]{'+','.join(cs(p) for p in files)+'}){\n'+body
         script=base/'cache/effects.csx';script.write_text(code)
         bounded([str(Path(cfg['sdk'])/'lleditscript.exe'),str(script)],base/'cache/effects.log',cfg)
         textures=base/'cache/textures';textures.mkdir(exist_ok=True)
@@ -114,8 +115,11 @@ def build_fx(job,cols,hardpoints,equipment):
                     if not beam:
                         for axis in range(3):
                             fc=o.driver_add('location',axis);fc.driver.expression=f'{origin[axis]:.9g}+{(direction[axis]*speed*life):.9g}*((frame/24/{life:.9g}+{age:.9g})%1)'
-                    if req['key']=='flash_particle':
-                        fc=o.driver_add('hide_render');fc.driver.expression='not (72<=frame<120 and (frame-72)%2.88<1.1)'
+                    if req['key']=='flash_particle_name':
+                        # Shader gating also works in viewport; hide_render alone does not.
+                        delay=max(.001,float(first(mount['definition'],'refire_delay') or .12)*24)
+                        mask=next(n for n in mat.node_tree.nodes if n.type=='MATH')
+                        fc=mask.inputs[1].driver_add('default_value');fc.driver.expression=f'1 if 72<=frame<120 and (frame-72)%{delay:.9g}<min(1.1,{delay:.9g}) else 0'
                     o['source_effect']=req['nickname'];o['accuracy']=report['accuracy']
                 report['created'].append(name)
     # Inherited INI light properties; compact original texture cards, no scene lights.
@@ -131,5 +135,12 @@ def build_fx(job,cols,hardpoints,equipment):
             d=defs.get(str(first(d,'inherit')).lower())
         color=tuple(float(x)/255 for x in props.get('color',[255,255,255]))
         mat=material('Light::'+hp.name,'bulb',color,1)
-        if mat:card('Light::'+hp.name,hp,float(props.get('bulb_size',[.1])[0]),mat)
+        if mat:
+            card('Light::'+hp.name,hp,float(props.get('bulb_size',[.1])[0]),mat)
+            mask=next(n for n in mat.node_tree.nodes if n.type=='MATH')
+            if 'docklight' in hp.name.lower():mask.inputs[1].default_value=0
+            elif 'avg_delay' in props and 'blink_duration' in props:
+                delay=float(props['avg_delay'][0])*24;duration=float(props['blink_duration'][0])*24
+                fc=mask.inputs[1].driver_add('default_value');fc.driver.expression=f'1 if frame%{max(.1,delay+duration):.9g}<{duration:.9g} else .25'
     return report
+
