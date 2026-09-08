@@ -15,8 +15,24 @@ for mount in r['mounted']:
     delta=comp(connector)-comp(hp)
     assert max(abs(delta[i][j]) for i in range(4) for j in range(4))<1e-4,mount
 assert all(bpy.data.actions.get(a) is not None for a in r['native_actions'])
-for name in ['FX','Ship_LODs','Ship_Collision','Damage_References']:
+for name in ['Ship_LODs','Ship_Collision','Damage_References']:
     assert bpy.context.view_layer.layer_collection.children['Freelancer_Ship'].children[name].exclude
 # Read several frames to exercise persisted NLA and simple drivers; no rendering.
-for frame in [1,36,73,122,240]:s.frame_set(frame)
+from mathutils import Matrix
+moving=[bpy.data.objects[n] for n in r['animated_objects']]
+samples={}
+for frame in [1,36,60,73,122,169,217]:
+    s.frame_set(frame)
+    samples[frame]={o.name:o.matrix_basis.copy() for o in moving}
+def distance(a,b):return max(abs(a[i][j]-b[i][j]) for i in range(4) for j in range(4))
+for o in moving:
+    is_gun=any(t.name=='Fire burst' for t in o.animation_data.nla_tracks)
+    if is_gun:
+        assert distance(samples[1][o.name],samples[73][o.name])>1e-5,('No first recoil',o.name)
+        assert distance(samples[73][o.name],samples[169][o.name])<1e-4,('Second burst mismatch',o.name)
+        assert distance(samples[1][o.name],samples[217][o.name])<1e-4,('Rest pose not restored',o.name)
+    else:
+        assert distance(samples[1][o.name],samples[36][o.name])>1e-5,('Door does not open',o.name)
+        assert distance(samples[1][o.name],samples[60][o.name])<1e-4,('Door does not close',o.name)
+assert not bpy.context.view_layer.layer_collection.children['Freelancer_Ship'].children['FX'].exclude
 print('VERIFIED',r['nickname'],len(s.objects),'objects',len(r['mounted']),'mounts')

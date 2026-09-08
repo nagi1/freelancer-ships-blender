@@ -59,6 +59,11 @@ def build_fx(job,cols,hardpoints,equipment):
     from mathutils import Matrix,Vector,Quaternion
     base=Path(job['base']);ship=job['ship'];report={'created':[],'unsupported':[],'accuracy':'RECREATED_FROM_FREELANCER_ALE; eight crossed cards maximum per emitter; sampled fixed SParam .85; straight-flight trails; approximate alpha blending'}
     C=Matrix(((1,0,0),(0,0,-1),(0,1,0)))
+    # Reuse the verified elet.blend ALE node implementation, with an eight-particle
+    # budget. Unlike the first batch preview it retains animated size/color/alpha.
+    import fx_runtime as runtime
+    layer=bpy.context.view_layer.layer_collection.children['Freelancer_Ship']
+    layer.children['Helpers'].exclude=False
     textures={p.stem.lower():p for p in (base/'cache/textures').glob('*')}
     def material(name,texture,color,alpha):
         p=textures.get(str(texture).lower())
@@ -94,34 +99,10 @@ def build_fx(job,cols,hardpoints,equipment):
         refs={x['Index']:x for x in effect['Fx']};nodes={x['CRC']:x for x in data['Nodes']}
         if not hps:report['unsupported'].append('Effect lacks mount '+str(req['nickname']))
         for hp in hps:
-            for pair in effect['Pairs']:
-                en=nodes.get(refs[pair['Item1']]['CRC']);an=nodes.get(refs[pair['Item2']]['CRC'])
-                if not en or not an:continue
-                ed=en['Samples'][2]['Parameters'];ad=an['Samples'][2]['Parameters']
-                def scalar(d,k,default):
-                    x=d.get(k,default);return float(x[0] if isinstance(x,list) else x)
-                frequency=scalar(ed,'Emitter_Frequency',0)
-                if frequency<=0:continue
-                life=max(.001,scalar(ed,'Emitter_InitLifeSpan',.2));speed=scalar(ed,'Emitter_Pressure',0)
-                tr=ed.get('Node_Transform',{});pos=tr.get('Translation',dict(X=0,Y=0,Z=0));rot=tr.get('Rotation',dict(W=1,X=0,Y=0,Z=0))
-                origin=C@Vector((pos['X'],pos['Y'],pos['Z']));direction=C@(Quaternion((rot['W'],rot['X'],rot['Y'],rot['Z']))@Vector((0,1,0)))
-                col=ad.get('BasicApp_Color',[dict(R=1,G=1,B=1)]*33)[8];color=(col['R'],col['G'],col['B'])
-                name=str(req['nickname'])+'::'+hp.name+'::'+str(pair['Item1']);mat=material(name,ad.get('BasicApp_TexName','planetflare'),color,scalar(ad,'BasicApp_Alpha',1))
-                if not mat:continue
-                beam=an['Name']=='FLBeamAppearance';count=1 if beam else min(8,max(1,math.ceil(frequency*life)))
-                for j in range(count):
-                    age=(j+.5)/count;size=ad.get('BasicApp_Size',ad.get('RectApp_Width',[1]*33))[round(age*32)]
-                    o=card(name+'::'+str(j),hp,max(.001,size),mat,origin,80*life if beam else 0)
-                    if not beam:
-                        for axis in range(3):
-                            fc=o.driver_add('location',axis);fc.driver.expression=f'{origin[axis]:.9g}+{(direction[axis]*speed*life):.9g}*((frame/24/{life:.9g}+{age:.9g})%1)'
-                    if req['key']=='flash_particle_name':
-                        # Shader gating also works in viewport; hide_render alone does not.
-                        delay=max(.001,float(first(mount['definition'],'refire_delay') or .12)*24)
-                        mask=next(n for n in mat.node_tree.nodes if n.type=='MATH')
-                        fc=mask.inputs[1].driver_add('default_value');fc.driver.expression=f'1 if 72<=frame<120 and (frame-72)%{delay:.9g}<min(1.1,{delay:.9g}) else 0'
-                    o['source_effect']=req['nickname'];o['accuracy']=report['accuracy']
-                report['created'].append(name)
+            control='engine_on' if req['kind']=='engine' else 'thruster_on' if req['kind']=='thruster' else 'contrails_on' if req['kind']=='attachedfx' else 'weapon_effects'
+            before=len(runtime.fxrecords)
+            runtime.make_effect(file,effect['Name'],hp.name,cols['FX'],control,req['key']=='flash_particle_name',5 if req['kind']=='thruster' else 2)
+            report['created'].extend(runtime.fxrecords[before:])
     # Inherited INI light properties; compact original texture cards, no scene lights.
     defs={str(first(d,'nickname')).lower():d for d in ship['dependencies'] if d['section'].lower()=='light'}
     for m,r,objs in equipment:
@@ -142,5 +123,17 @@ def build_fx(job,cols,hardpoints,equipment):
             elif 'avg_delay' in props and 'blink_duration' in props:
                 delay=float(props['avg_delay'][0])*24;duration=float(props['blink_duration'][0])*24
                 fc=mask.inputs[1].driver_add('default_value');fc.driver.expression=f'1 if frame%{max(.1,delay+duration):.9g}<{duration:.9g} else .25'
+    # EEVEE-compatible alpha blending: no stochastic dither, no transparent shadows.
+    for m in bpy.data.materials:
+        if not m.use_nodes or not m.get('accuracy'):continue
+        n=m.node_tree.nodes;l=m.node_tree.links
+        add=next((x for x in n if x.type=='ADD_SHADER'),None)
+        if not add:continue
+        em=next(x for x in n if x.type=='EMISSION');tr=next(x for x in n if x.type=='BSDF_TRANSPARENT');tex=next(x for x in n if x.type=='TEX_IMAGE');out=next(x for x in n if x.type=='OUTPUT_MATERIAL')
+        mix=n.new('ShaderNodeMixShader');mask=n.new('ShaderNodeMath');mask.operation='MULTIPLY';mask.use_clamp=True
+        l.new(tex.outputs['Color'],mask.inputs[0]);l.new(em.inputs['Strength'].links[0].from_socket,mask.inputs[1]);l.new(mask.outputs[0],mix.inputs[0]);l.new(tr.outputs[0],mix.inputs[1]);l.new(em.outputs[0],mix.inputs[2]);l.new(mix.outputs[0],out.inputs['Surface']);n.remove(add);m.surface_render_method='BLENDED'
+    for o in cols['FX'].all_objects:o.visible_shadow=False
+    report['accuracy']='RECREATED_FROM_FREELANCER_ALE; reference Geometry Nodes animation with sampled size/color/alpha; eight particles per emitter; engine SParam .85 and thruster 1; straight-flight trails'
     return report
+
 

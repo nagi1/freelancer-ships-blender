@@ -119,6 +119,8 @@ for screen in bpy.data.screens:
             a.spaces.active.region_3d.view_location=center;a.spaces.active.region_3d.view_distance=radius*2.8;a.spaces.active.clip_end=max(10000,radius*20)
 for image in bpy.data.images:
     if image.source=='FILE' and not image.packed_file:image.pack()
+from animation_preview import configure_preview
+configure_preview()
 unpacked=[im.name for im in bpy.data.images if im.source=='FILE' and not im.packed_file]
 if unpacked:errors.append('Unpacked images: '+str(unpacked))
 report={'valid':not errors,'errors':errors,'warnings':warnings,'nickname':ship['nickname'],'output':JOB['output'],'signature':JOB['signature'],'objects':len(s.objects),'vertices':sum(len(o.data.vertices) for o in bpy.data.objects if o.type=='MESH'),'visible_vertices':sum(len(o.data.vertices) for o in visible),'mounted':mounted,'native_actions':sorted(native_actions),'animated_objects':animated,'packed_images':sum(bool(i.packed_file) for i in bpy.data.images),'fx':fx_report}
