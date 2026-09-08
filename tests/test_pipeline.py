@@ -5,6 +5,25 @@ import ini
 from build_fx import resolve_effect,effect_requests
 
 class PipelineTests(unittest.TestCase):
+    def test_registered_rtc_models_and_inactive_regen_loadouts(self):
+        from run import plan
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td);old=ini.ROOT
+            try:
+                for folder in ['EXE','DATA/SHIPS','DATA/ships/utility']:(root/folder).mkdir(parents=True,exist_ok=True)
+                (root/'EXE/freelancer.ini').write_text('[Data]\nships = SHIPS/shiparch.ini\nships = SHIPS/rtc_shiparch.ini\nloadouts = SHIPS/loadouts.ini\n')
+                (root/'DATA/SHIPS/shiparch.ini').write_text('[Ship]\nnickname = gameplay\nDA_archetype = ships/utility/model.cmp\n')
+                (root/'DATA/SHIPS/rtc_shiparch.ini').write_text('[Ship]\nnickname = rtc_alias\nDA_archetype = ships/utility/model.cmp\n[Ship]\nnickname = rtc_unique\nDA_archetype = ships/utility/unique.cmp\n')
+                (root/'DATA/SHIPS/loadouts.ini').write_text('[Loadout]\nnickname = active\narchetype = gameplay\n')
+                (root/'DATA/SHIPS/loadouts_regen.ini').write_text('[Loadout]\nnickname = aaa_loadout01\narchetype = gameplay\n')
+                for name in ['model','unique']:(root/f'DATA/ships/utility/{name}.cmp').write_bytes(b'fixture')
+                result=plan({'game':td,'liberty_loadouts':{}},'all')
+                self.assertEqual(len(result['ships']),2)
+                gameplay=next(s for s in result['ships'] if s['nickname']=='gameplay')
+                self.assertEqual(gameplay['aliases'],['gameplay','rtc_alias'])
+                self.assertEqual(ini.first(gameplay['loadout'],'nickname'),'active')
+            finally:ini.ROOT=old
+
     def test_text_and_bini_preserve_repeated_equipment(self):
         with tempfile.TemporaryDirectory() as td:
             root=Path(td);old=ini.ROOT;ini.ROOT=root
