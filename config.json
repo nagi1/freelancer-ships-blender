@@ -1,0 +1,15 @@
+{
+  "game": "C:/Program Files (x86)/Microsoft Games/Freelancer",
+  "sdk": "C:/Users/igfi/Downloads/librelancer-sdk-2025.11-win64/librelancer-2025.11-win-x64",
+  "blender": "C:/Program Files/Blender Foundation/Blender 5.2/blender.exe",
+  "threads": 2,
+  "timeout_seconds": 600,
+  "liberty_loadouts": {
+    "li_fighter": "li_p_li_fighter_loadout01",
+    "li_elite": "li_n_li_elite_loadout02",
+    "li_elite2": "MSN03_Juni",
+    "li_freighter": "co_li_freighter_loadout01",
+    "li_cruiser": "li_n_li_cruiser",
+    "li_dreadnought": "li_n_li_dreadnought"
+  }
+}

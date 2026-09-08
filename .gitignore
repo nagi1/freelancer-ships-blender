@@ -1,0 +1,6 @@
+cache/
+ships/
+reports/
+__pycache__/
+*.blend1
+config.local.json
